@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Platformer Editor Pro (Portals Edition)</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #222; color: white; padding-bottom: 50px; }
+        canvas { background: #87CEEB; border: 4px solid #444; cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .toolbar { background: #333; padding: 15px; border-radius: 8px; margin: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .type-btn { padding: 8px 12px; cursor: pointer; border: 2px solid transparent; border-radius: 4px; transition: 0.2s; font-size: 14px; }
+        .selected { border-color: #fff; font-weight: bold; transform: scale(1.05); }
+        textarea { width: 800px; height: 80px; background: #000; color: #0f0; margin-top: 10px; border: 1px solid #444; font-family: monospace; }
+       
+        /* Object Colors (Matching Game Colors) */
+        #type-PLATFORM { background: #2f3542; }
+        #type-SPIKE { background: #ff4757; }
+        #type-GOAL { background: #ffa502; }
+        #type-SPAWN { background: #2ed573; }
+        #type-SHRINK { background: #9c88ff; }
+        #type-NORMAL { background: #00a8ff; }
+        #type-GROW { background: #e1b12c; }
+       
+        .action-btn { background: #555; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .action-btn:hover { background: #777; }
+        .mode-toggle { background: #e67e22; font-weight: bold; }
+        .mode-active { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+        .help { margin-top: 20px; font-size: 0.9em; color: #aaa; text-align: center; }
+    </style>
+</head>
+<body>
+    <h2>Advanced Level Editor</h2>
+    <div class="toolbar">
+        <div id="type-PLATFORM" class="type-btn selected" onclick="setType('PLATFORM')">Platform</div>
+        <div id="type-SPIKE" class="type-btn" onclick="setType('SPIKE')">Spike</div>
+        <div id="type-GOAL" class="type-btn" onclick="setType('GOAL')">Goal</div>
+        <div id="type-SPAWN" class="type-btn" onclick="setType('SPAWN')">Spawn Point</div>
+       
+        <div style="border-left: 1px solid #555; height: 30px; margin: 0 5px;"></div>
+       
+        <div id="type-SHRINK" class="type-btn" onclick="setType('PORTAL_SHRINK', 'SHRINK')">Shrink</div>
+        <div id="type-NORMAL" class="type-btn" onclick="setType('PORTAL_NORMAL', 'NORMAL')">Normal</div>
+        <div id="type-GROW" class="type-btn" onclick="setType('PORTAL_GROW', 'GROW')">Grow</div>
+       
+        <div style="border-left: 1px solid #555; height: 30px; margin: 0 5px;"></div>
+       
+        <button id="trajectoryBtn" class="action-btn mode-toggle" onclick="toggleTrajectoryMode()">Mode: Draw</button>
+        <button class="action-btn" onclick="undo()">Undo</button>
+        <button class="action-btn" onclick="exportCode()">Export</button>
+        <button class="action-btn" onclick="importCode()" style="background:#9b59b6;">Import</button>
+        <button class="action-btn" onclick="clearAll()" style="background:#a22;">Clear</button>
+    </div>
+   
+    <canvas id="editorCanvas" width="800" height="400"></canvas>
+    <textarea id="output" placeholder="Paste code here and click 'Import Code' to edit..."></textarea>
+
+    <div class="help">
+        <b>Controls:</b> Drag to Draw | Right Click to Delete | Ctrl+Z to Undo | <b>\ to Play</b> <br>
+        To make a platform move: Click 'Mode: Draw' to switch to 'Set Trajectory', then drag from an object to its destination.
+    </div>
+
+    <script>
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+        const outputField = document.getElementById('output');
+       
+        let currentType = 'PLATFORM';
+        let objects = [{ x: 0, y: 380, width: 800, height: 20, type: 'PLATFORM' }];
+        let history = [];
+        let isTrajectoryMode = false;
+        let selectedObj = null;
+        let isDrawing = false;
+        let startX, startY, curX, curY;
+
+        // Added portal colors here so the canvas knows how to draw them
+        const colors = {
+            PLATFORM: '#2f3542',
+            SPIKE: '#ff4757',
+            GOAL: '#ffa502',
+            SPAWN: '#2ed573',
+            PORTAL_SHRINK: '#9c88ff',
+            PORTAL_NORMAL: '#00a8ff',
+            PORTAL_GROW: '#e1b12c'
+        };
+
+        function toggleTrajectoryMode() {
+            isTrajectoryMode = !isTrajectoryMode;
+            const btn = document.getElementById('trajectoryBtn');
+            btn.innerText = isTrajectoryMode ? "Mode: Set Trajectory" : "Mode: Draw";
+            btn.classList.toggle('mode-active');
+            selectedObj = null;
+        }
+
+        // Updated setType to handle both the internal name and the button ID
+        function setType(t, buttonId) {
+            if (isTrajectoryMode) toggleTrajectoryMode();
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+           
+            // If buttonId is provided (for portals), use it; otherwise use t
+            const id = buttonId ? 'type-' + buttonId : 'type-' + t;
+            document.getElementById(id).classList.add('selected');
+            currentType = t;
+        }
+
+        function saveState() {
+            history.push(JSON.stringify(objects));
+            if (history.length > 50) history.shift();
+        }
+
+        function undo() {
+            if (history.length > 0) {
+                objects = JSON.parse(history.pop());
+                render();
+            }
+        }
+
+        function importCode() {
+            const rawData = outputField.value.trim();
+            try {
+                let cleanData = rawData.includes('=') ? rawData.split('=')[1].trim().replace(/;$/, '') : rawData;
+                const imported = JSON.parse(cleanData);
+                if (Array.isArray(imported)) {
+                    saveState();
+                    objects = imported;
+                    render();
+                }
+            } catch (e) { alert("Import Failed: Check format."); }
+        }
+
+        canvas.onmousedown = (e) => {
+            if(e.button !== 0) return;
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+
+            if (isTrajectoryMode) {
+                selectedObj = objects.find(o => mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height);
+                if (selectedObj) {
+                    saveState();
+                    startX = mx; startY = my;
+                }
+            } else {
+                saveState();
+                isDrawing = true;
+                startX = mx; startY = my;
+                curX = mx; curY = my;
+            }
+        };
+
+        canvas.onmousemove = (e) => {
+            const r = canvas.getBoundingClientRect();
+            curX = e.clientX - r.left;
+            curY = e.clientY - r.top;
+
+            if (isTrajectoryMode && selectedObj) {
+                selectedObj.tx = selectedObj.x + (curX - startX);
+                selectedObj.ty = selectedObj.y + (curY - startY);
+                selectedObj.isMoving = true;
+            }
+            render();
+        };
+
+        window.onmouseup = () => {
+            if (isDrawing) {
+                const w = Math.abs(curX - startX);
+                const h = Math.abs(curY - startY);
+                if(w > 5 && h > 5) {
+                    objects.push({
+                        x: Math.min(startX, curX), y: Math.min(startY, curY),
+                        width: w, height: h, type: currentType
+                    });
+                } else { history.pop(); }
+            }
+            isDrawing = false;
+            selectedObj = null;
+            render();
+        };
+
+        canvas.oncontextmenu = (e) => {
+            e.preventDefault();
+            saveState();
+            const r = canvas.getBoundingClientRect();
+            const mx = e.clientX - r.left;
+            const my = e.clientY - r.top;
+            const oldLen = objects.length;
+            objects = objects.filter(o => !(mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height));
+            if(objects.length === oldLen) history.pop();
+            render();
+        };
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+           
+            objects.forEach(o => {
+                ctx.fillStyle = colors[o.type] || '#fff';
+                ctx.fillRect(o.x, o.y, o.width, o.height);
+
+                if (o.isMoving) {
+                    ctx.beginPath();
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(o.x + o.width/2, o.y + o.height/2);
+                    ctx.lineTo(o.tx + o.width/2, o.ty + o.height/2);
+                    ctx.stroke();
+                    ctx.strokeRect(o.tx, o.ty, o.width, o.height);
+                    ctx.setLineDash([]);
+                }
+            });
+
+            if(isDrawing) {
+                ctx.strokeStyle = 'white';
+                ctx.setLineDash([5, 5]);
+                ctx.strokeRect(startX, startY, curX - startX, curY - startY);
+                ctx.setLineDash([]);
+            }
+        }
+
+        function exportCode() {
+            outputField.value = JSON.stringify(objects);
+        }
+
+        function clearAll() {
+            if(confirm("Clear the whole level?")) {
+                saveState();
+                objects = [];
+                render();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') undo();
+            if (e.key === '\\') {
+                window.location.href = '/';
+            }
+        });
+
+        render();
+    </script>
+</body>
+</html>
