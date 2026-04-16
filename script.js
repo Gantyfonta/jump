@@ -5,11 +5,12 @@ canvas.width = 800;
 canvas.height = 400;
 
 // --- 1. SETTINGS & VARIABLES ---
-const gravity = 1000;    
+const gravity = 2200;    
 const friction = 0.001;  
-const jumpForce = -500;  
-const moveSpeed = 400;   
-const acceleration = 2000; 
+const jumpForce = -750;  
+const moveSpeed = 450;   
+const acceleration = 2500; 
+const coyoteTime = 0.15; // Seconds of coyote time
 
 let lastTime = 0; 
 let gameTime = 0; 
@@ -37,6 +38,7 @@ const player = {
     velX: 0,
     velY: 0,
     jumping: false,
+    coyoteCounter: 0,
     color: '#ff4757'
 };
 
@@ -84,6 +86,73 @@ const LEVEL_DATABASE = [
 let currentLevelIndex = 0;
 let worldObjects = [];
 let spawnPoint = { x: 50, y: 300 };
+let gameState = 'TITLE'; // TITLE, PLAYING
+
+// --- CONTROLS CONFIG ---
+let controls = {
+    left: 'ArrowLeft',
+    right: 'ArrowRight',
+    jump: 'Space',
+    reset: 'KeyR'
+};
+
+// Load controls from local storage
+const savedControls = localStorage.getItem('platformer_controls');
+if (savedControls) {
+    try {
+        controls = JSON.parse(savedControls);
+    } catch (e) {
+        console.error("Failed to parse saved controls", e);
+    }
+}
+
+let remappingKey = null;
+
+function remapKey(action) {
+    remappingKey = action;
+    const btn = document.getElementById(`key-${action}`);
+    btn.innerText = 'Press any key...';
+    btn.classList.add('waiting');
+}
+
+function saveControls() {
+    localStorage.setItem('platformer_controls', JSON.stringify(controls));
+}
+
+// --- UI MANAGEMENT ---
+function startGame() {
+    gameState = 'PLAYING';
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('controls-screen').style.display = 'none';
+    document.getElementById('ui').style.display = 'block';
+    startTime = Date.now();
+    timerRunning = true;
+    initLevel();
+}
+
+function resetRun() {
+    gameState = 'TITLE';
+    currentLevelIndex = 0;
+    timerRunning = false;
+    timerFinished = false;
+    elapsedTime = 0;
+    document.getElementById('title-screen').style.display = 'flex';
+    document.getElementById('ui').style.display = 'none';
+}
+
+function showControls() {
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('controls-screen').style.display = 'flex';
+    // Update button labels
+    for (let action in controls) {
+        document.getElementById(`key-${action}`).innerText = controls[action];
+    }
+}
+
+function showTitle() {
+    document.getElementById('title-screen').style.display = 'flex';
+    document.getElementById('controls-screen').style.display = 'none';
+}
 
 // --- PORTAL LOGIC ---
 function setPlayerSize(newSize) {
@@ -97,6 +166,7 @@ function setPlayerSize(newSize) {
 // 4. LEVEL LOGIC
 function initLevel() {
     worldObjects = LEVEL_DATABASE[currentLevelIndex];
+    document.getElementById('level-display').innerText = currentLevelIndex + 1;
     const spawn = worldObjects.find(o => o.type === 'SPAWN');
     if (spawn) {
         spawnPoint = { x: spawn.x, y: spawn.y };
@@ -127,9 +197,22 @@ function nextLevel() {
 
 // 5. INPUT LISTENERS
 window.addEventListener('keydown', (e) => {
+    if (remappingKey) {
+        controls[remappingKey] = e.code;
+        const btn = document.getElementById(`key-${remappingKey}`);
+        btn.innerText = e.code;
+        btn.classList.remove('waiting');
+        remappingKey = null;
+        saveControls(); // Save after remap
+        return;
+    }
+
     keys[e.code] = true;
     if (e.key === '\\') {
         window.location.href = 'editor.html';
+    }
+    if (e.code === controls.reset && gameState === 'PLAYING') {
+        respawn();
     }
 });
 window.addEventListener('keyup', (e) => keys[e.code] = false);
@@ -140,10 +223,15 @@ function update(timestamp) {
     let dt = (timestamp - lastTime) / 1000; 
     lastTime = timestamp;
 
+    if (gameState !== 'PLAYING') {
+        requestAnimationFrame(update);
+        return;
+    }
+
     if (dt > 0.1) dt = 0.1;
     gameTime += dt * 2; 
 
-    // --- 1. UPDATE PLATFORM POSITIONS ---
+    // --- 1. UPDATE PLATFORM POSITIONS & ROTATION ---
     worldObjects.forEach(obj => {
         if (obj.isMoving) {
             obj.oldX = obj.currentX || obj.x;
@@ -155,27 +243,38 @@ function update(timestamp) {
             obj.currentX = obj.x;
             obj.currentY = obj.y;
         }
+
+        if (obj.isSpinning) {
+            obj.currentAngle = (obj.currentAngle || 0) + (obj.spinSpeed || 0) * dt;
+        } else {
+            obj.currentAngle = obj.angle || 0;
+        }
     });
 
     // --- 2. TIMER ---
     if (!timerRunning && !timerFinished) {
-        if (keys['ArrowUp'] || keys['Space'] || keys['KeyW'] || 
-            keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD']) {
+        if (keys[controls.jump] || keys[controls.left] || keys[controls.right]) {
             startTime = Date.now();
             timerRunning = true;
         }
     }
-    if (timerRunning) elapsedTime = Date.now() - startTime;
+    if (timerRunning) {
+        elapsedTime = Date.now() - startTime;
+        document.getElementById('timer-display').innerText = formatTime(elapsedTime);
+    }
 
     // --- 3. INPUTS & PHYSICS ---
-    if ((keys['ArrowUp'] || keys['Space'] || keys['KeyW']) && !player.jumping) {
+    if (keys[controls.jump] && player.coyoteCounter > 0) {
         player.velY = jumpForce;
         player.jumping = true;
+        player.coyoteCounter = 0; // Use up coyote time immediately
     }
     
-    if (keys['ArrowLeft'] || keys['KeyA']) {
+    player.coyoteCounter -= dt;
+    
+    if (keys[controls.left]) {
         player.velX -= acceleration * dt;
-    } else if (keys['ArrowRight'] || keys['KeyD']) {
+    } else if (keys[controls.right]) {
         player.velX += acceleration * dt;
     } else {
         player.velX *= Math.pow(friction, dt);
@@ -196,6 +295,7 @@ function update(timestamp) {
             if (obj.type === 'PLATFORM') {
                 if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= obj.currentY + 10) { 
                     player.jumping = false;
+                    player.coyoteCounter = coyoteTime; // Reset coyote time
                     player.velY = 0;
                     player.y = obj.currentY - player.height;
                     if (obj.isMoving) player.y += (obj.currentY - obj.oldY);
@@ -247,11 +347,11 @@ function update(timestamp) {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    ctx.fillStyle = "white";
-    ctx.font = "16px sans-serif";
-    ctx.fillText(`Level: ${currentLevelIndex + 1}`, 20, 30);
-
     worldObjects.forEach(obj => {
+        ctx.save();
+        ctx.translate(obj.currentX + obj.width / 2, obj.currentY + obj.height / 2);
+        ctx.rotate((obj.currentAngle || 0) * Math.PI / 180);
+        
         if (obj.type === 'PLATFORM') ctx.fillStyle = '#2f3542';
         else if (obj.type === 'SPIKE') ctx.fillStyle = '#ff4757';
         else if (obj.type === 'GOAL') ctx.fillStyle = '#ffa502';
@@ -260,19 +360,13 @@ function draw() {
         else if (obj.type === 'PORTAL_GROW') ctx.fillStyle = '#e1b12c';
         else if (obj.type === 'PORTAL_NORMAL') ctx.fillStyle = '#00a8ff';
         
-        ctx.fillRect(obj.currentX, obj.currentY, obj.width, obj.height);
+        ctx.fillRect(-obj.width / 2, -obj.height / 2, obj.width, obj.height);
+        ctx.restore();
     });
 
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 20px monospace";
-    ctx.textAlign = "right";
-    ctx.fillText(formatTime(elapsedTime), canvas.width - 20, 30);
-    ctx.textAlign = "left"; 
 }
 
 // START THE GAME
-initLevel();
 requestAnimationFrame(update);

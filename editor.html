@@ -42,7 +42,17 @@
        
         <div style="border-left: 1px solid #555; height: 30px; margin: 0 5px;"></div>
        
-        <button id="trajectoryBtn" class="action-btn mode-toggle" onclick="toggleTrajectoryMode()">Mode: Draw</button>
+        <button id="drawBtn" class="action-btn mode-toggle mode-active" onclick="setMode('DRAW')">Draw</button>
+        <button id="moveBtn" class="action-btn mode-toggle" onclick="setMode('MOVE')">Move</button>
+        <button id="rotateBtn" class="action-btn mode-toggle" onclick="setMode('ROTATE')">Rotate</button>
+        <button id="deleteBtn" class="action-btn mode-toggle" onclick="setMode('DELETE')">Delete</button>
+        <button id="trajectoryBtn" class="action-btn mode-toggle" onclick="setMode('TRAJECTORY')">Trajectory</button>
+        
+        <div style="border-left: 1px solid #555; height: 30px; margin: 0 5px;"></div>
+        
+        <button class="action-btn" onclick="clearTrajectory()" style="background:#e67e22;">Clear Path</button>
+        <button class="action-btn" onclick="clearSpin()" style="background:#e67e22;">Clear Spin</button>
+        
         <button id="testBtn" class="action-btn" onclick="toggleTestMode()" style="background:#e74c3c; font-weight:bold;">Test Level</button>
         <button class="action-btn" onclick="undo()">Undo</button>
         <button class="action-btn" onclick="exportCode()">Export</button>
@@ -64,20 +74,54 @@
         const outputField = document.getElementById('output');
        
         let currentType = 'PLATFORM';
-        let objects = [{ x: 0, y: 380, width: 800, height: 20, type: 'PLATFORM' }];
+        let objects = [{ x: 0, y: 380, width: 800, height: 20, type: 'PLATFORM', angle: 0 }];
         let history = [];
-        let isTrajectoryMode = false;
+        let currentMode = 'DRAW'; // DRAW, MOVE, ROTATE, DELETE, TRAJECTORY
         let selectedObj = null;
         let isDrawing = false;
         let startX, startY, curX, curY;
+        let offsetX, offsetY;
 
         // --- TEST MODE VARIABLES ---
         let isTestMode = false;
         let testPlayer = { x: 0, y: 0, vx: 0, vy: 0, width: 20, height: 20, jumping: false };
         let keys = {};
-        const gravity = 800;
-        const jumpForce = -400;
-        const moveSpeed = 300;
+        const gravity = 2200;
+        const jumpForce = -750;
+        const moveSpeed = 450;
+
+        function setMode(m) {
+            if (isTestMode) return;
+            currentMode = m;
+            document.querySelectorAll('.mode-toggle').forEach(b => b.classList.remove('mode-active'));
+            const btnId = m.toLowerCase() + 'Btn';
+            document.getElementById(btnId).classList.add('mode-active');
+            selectedObj = null;
+        }
+
+        function clearTrajectory() {
+            if (selectedObj) {
+                saveState();
+                selectedObj.isMoving = false;
+                delete selectedObj.tx;
+                delete selectedObj.ty;
+                render();
+            } else {
+                alert("Select an object first (using Move, Rotate, or Trajectory tool)");
+            }
+        }
+
+        function clearSpin() {
+            if (selectedObj) {
+                saveState();
+                selectedObj.isSpinning = false;
+                selectedObj.spinSpeed = 0;
+                selectedObj.angle = 0;
+                render();
+            } else {
+                alert("Select an object first");
+            }
+        }
 
         function toggleTestMode() {
             isTestMode = !isTestMode;
@@ -92,9 +136,19 @@
                 testPlayer.vx = 0;
                 testPlayer.vy = 0;
                 testPlayer.jumping = false;
-                if (isTrajectoryMode) toggleTrajectoryMode();
             }
             render();
+        }
+
+        // Updated setType to handle both the internal name and the button ID
+        function setType(t, buttonId) {
+            if (currentMode !== 'DRAW') setMode('DRAW');
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+           
+            // If buttonId is provided (for portals), use it; otherwise use t
+            const id = buttonId ? 'type-' + buttonId : 'type-' + t;
+            document.getElementById(id).classList.add('selected');
+            currentType = t;
         }
 
         // Added portal colors here so the canvas knows how to draw them
@@ -107,25 +161,6 @@
             PORTAL_NORMAL: '#00a8ff',
             PORTAL_GROW: '#e1b12c'
         };
-
-        function toggleTrajectoryMode() {
-            isTrajectoryMode = !isTrajectoryMode;
-            const btn = document.getElementById('trajectoryBtn');
-            btn.innerText = isTrajectoryMode ? "Mode: Set Trajectory" : "Mode: Draw";
-            btn.classList.toggle('mode-active');
-            selectedObj = null;
-        }
-
-        // Updated setType to handle both the internal name and the button ID
-        function setType(t, buttonId) {
-            if (isTrajectoryMode) toggleTrajectoryMode();
-            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
-           
-            // If buttonId is provided (for portals), use it; otherwise use t
-            const id = buttonId ? 'type-' + buttonId : 'type-' + t;
-            document.getElementById(id).classList.add('selected');
-            currentType = t;
-        }
 
         function saveState() {
             history.push(JSON.stringify(objects));
@@ -158,18 +193,27 @@
             const mx = e.clientX - r.left;
             const my = e.clientY - r.top;
 
-            if (isTrajectoryMode) {
-                selectedObj = objects.find(o => mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height);
-                if (selectedObj) {
-                    saveState();
-                    startX = mx; startY = my;
-                }
-            } else {
+            if (currentMode === 'DRAW') {
                 saveState();
                 isDrawing = true;
                 startX = mx; startY = my;
                 curX = mx; curY = my;
+            } else {
+                selectedObj = objects.find(o => mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height);
+                if (selectedObj) {
+                    saveState();
+                    if (currentMode === 'MOVE') {
+                        offsetX = mx - selectedObj.x;
+                        offsetY = my - selectedObj.y;
+                    } else if (currentMode === 'DELETE') {
+                        objects = objects.filter(o => o !== selectedObj);
+                        selectedObj = null;
+                    } else if (currentMode === 'ROTATE' || currentMode === 'TRAJECTORY') {
+                        startX = mx; startY = my;
+                    }
+                }
             }
+            render();
         };
 
         canvas.onmousemove = (e) => {
@@ -177,10 +221,24 @@
             curX = e.clientX - r.left;
             curY = e.clientY - r.top;
 
-            if (isTrajectoryMode && selectedObj) {
-                selectedObj.tx = selectedObj.x + (curX - startX);
-                selectedObj.ty = selectedObj.y + (curY - startY);
-                selectedObj.isMoving = true;
+            if (selectedObj) {
+                if (currentMode === 'MOVE') {
+                    selectedObj.x = curX - offsetX;
+                    selectedObj.y = curY - offsetY;
+                } else if (currentMode === 'ROTATE') {
+                    const centerX = selectedObj.x + selectedObj.width / 2;
+                    const centerY = selectedObj.y + selectedObj.height / 2;
+                    const dist = Math.sqrt((curX - centerX)**2 + (curY - centerY)**2);
+                    const angle = Math.atan2(curY - centerY, curX - centerX) * (180 / Math.PI);
+                    
+                    // Spin speed based on distance from center and direction
+                    selectedObj.spinSpeed = (curX - startX) * 2; 
+                    selectedObj.isSpinning = true;
+                } else if (currentMode === 'TRAJECTORY') {
+                    selectedObj.tx = selectedObj.x + (curX - startX);
+                    selectedObj.ty = selectedObj.y + (curY - startY);
+                    selectedObj.isMoving = true;
+                }
             }
             render();
         };
@@ -213,8 +271,10 @@
             render();
         };
 
-        function render() {
+        function render(timestamp) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const time = timestamp ? timestamp / 1000 : 0;
            
             // --- PHYSICS UPDATE (ONLY IN TEST MODE) ---
             if (isTestMode) {
@@ -269,8 +329,17 @@
             }
 
             objects.forEach(o => {
+                ctx.save();
+                let drawAngle = o.angle || 0;
+                if (o.isSpinning) {
+                    drawAngle += (o.spinSpeed || 0) * time;
+                }
+                
+                ctx.translate(o.x + o.width / 2, o.y + o.height / 2);
+                ctx.rotate(drawAngle * Math.PI / 180);
                 ctx.fillStyle = colors[o.type] || '#fff';
-                ctx.fillRect(o.x, o.y, o.width, o.height);
+                ctx.fillRect(-o.width / 2, -o.height / 2, o.width, o.height);
+                ctx.restore();
 
                 if (o.isMoving) {
                     ctx.beginPath();
@@ -288,6 +357,9 @@
             if (isTestMode) {
                 ctx.fillStyle = '#ff4757';
                 ctx.fillRect(testPlayer.x, testPlayer.y, testPlayer.width, testPlayer.height);
+            }
+
+            if (isTestMode || objects.some(o => o.isSpinning || o.isMoving)) {
                 requestAnimationFrame(render);
             }
 

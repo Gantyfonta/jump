@@ -9,7 +9,39 @@
 <body>
     <div id="game-container">
         <canvas id="gameCanvas"></canvas>
-        <div id="ui">Score: <span id="score">0</span></div>
+        <div id="ui" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 780px; padding: 0 10px;">
+                <div style="width: 150px;">Level: <span id="level-display">1</span></div>
+                <div id="timer-display" style="font-family: monospace; font-weight: bold; font-size: 24px; flex: 1; text-align: center;">00:00.00</div>
+                <div style="width: 150px; text-align: right;">
+                    <button onclick="resetRun()" style="padding: 5px 10px; font-size: 12px; background: #ff4757; box-shadow: 0 2px #c0392b;">Reset Run</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Title Screen -->
+        <div id="title-screen" class="overlay">
+            <h1>JS PLATFORMER</h1>
+            <p>Speedrun Edition</p>
+            <div class="menu-buttons">
+                <button onclick="startGame()">Start Game</button>
+                <button onclick="showControls()">Controls</button>
+                <button onclick="window.location.href='editor.html'">Level Editor</button>
+            </div>
+        </div>
+
+        <!-- Controls Screen -->
+        <div id="controls-screen" class="overlay" style="display: none;">
+            <h2>CONTROLS</h2>
+            <div id="controls-list" style="text-align: left; margin-bottom: 20px;">
+                <div class="control-item"><span>Move Left:</span> <button class="key-btn" id="key-left" onclick="remapKey('left')">ArrowLeft</button></div>
+                <div class="control-item"><span>Move Right:</span> <button class="key-btn" id="key-right" onclick="remapKey('right')">ArrowRight</button></div>
+                <div class="control-item"><span>Jump:</span> <button class="key-btn" id="key-jump" onclick="remapKey('jump')">Space</button></div>
+                <div class="control-item"><span>Reset Level:</span> <button class="key-btn" id="key-reset" onclick="remapKey('reset')">KeyR</button></div>
+            </div>
+            <p style="font-size: 14px; opacity: 0.7; margin-bottom: 20px;">Click a button then press any key to remap.</p>
+            <button onclick="showTitle()">Back</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

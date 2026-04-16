@@ -26,4 +26,102 @@ canvas {
     left: 10px;
     font-size: 20px;
     text-shadow: 2px 2px #000;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+}
+
+.overlay h1 {
+    font-size: 60px;
+    margin: 0;
+    color: #ff4757;
+    text-shadow: 4px 4px #000;
+}
+
+.overlay h2 {
+    font-size: 40px;
+    margin-bottom: 20px;
+    color: #ffa502;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+button {
+    padding: 12px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #2ed573;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: 0.2s;
+    box-shadow: 0 4px #26af5c;
+}
+
+button:hover {
+    background: #32e07b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px #26af5c;
+}
+
+button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px #26af5c;
+}
+
+li {
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+.control-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 300px;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.key-btn {
+    background: #555;
+    padding: 5px 10px;
+    font-size: 14px;
+    min-width: 100px;
+    box-shadow: 0 2px #333;
+}
+
+.key-btn.waiting {
+    background: #ffa502;
+    box-shadow: 0 2px #cc8400;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
