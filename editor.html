@@ -3,32 +3,29 @@
 <head>
     <title>Platformer Editor Pro</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@700&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; background: #0a0a0a; color: white; padding-bottom: 50px; }
-        h2 { font-family: 'Space Grotesk', sans-serif; font-size: 32px; letter-spacing: -1px; margin-bottom: 5px; }
-        canvas { background: #111; border: 1px solid #333; cursor: crosshair; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border-radius: 4px; }
-        .toolbar { background: #151515; padding: 12px; border-radius: 12px; margin: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; border: 1px solid #222; }
-        .type-btn { padding: 6px 12px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; transition: 0.2s; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-        .selected { background: #fff !important; color: #000 !important; transform: scale(1.05); }
-        textarea { width: 800px; height: 80px; background: #050505; color: #00d2ff; margin-top: 10px; border: 1px solid #222; font-family: 'JetBrains Mono', monospace; padding: 10px; border-radius: 8px; font-size: 11px; }
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #222; color: white; padding-bottom: 50px; }
+        canvas { background: #87CEEB; border: 4px solid #444; cursor: crosshair; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .toolbar { background: #333; padding: 15px; border-radius: 8px; margin: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .type-btn { padding: 8px 12px; cursor: pointer; border: 2px solid transparent; border-radius: 4px; transition: 0.2s; font-size: 14px; }
+        .selected { border-color: #fff; font-weight: bold; transform: scale(1.05); }
+        textarea { width: 800px; height: 80px; background: #000; color: #0f0; margin-top: 10px; border: 1px solid #444; font-family: monospace; }
        
-        /* Object Colors (Matching New Game Colors) */
-        #type-PLATFORM { background: #2f3542; color: #a4b0be; }
-        #type-SPIKE { background: #ff4757; color: white; }
-        #type-GOAL { background: #ffa502; color: black; }
-        #type-SPAWN { background: #2ed573; color: black; }
-        #type-SHRINK { background: #9c88ff; color: white; }
-        #type-NORMAL { background: #00a8ff; color: white; }
-        #type-GROW { background: #e1b12c; color: white; }
+        /* Object Colors (Matching Game Colors) */
+        #type-PLATFORM { background: #2f3542; }
+        #type-SPIKE { background: #ff4757; }
+        #type-GOAL { background: #ffa502; }
+        #type-SPAWN { background: #2ed573; }
+        #type-SHRINK { background: #9c88ff; }
+        #type-NORMAL { background: #00a8ff; }
+        #type-GROW { background: #e1b12c; }
        
-        .action-btn { background: #222; color: #aaa; border: 1px solid #333; padding: 6px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
-        .action-btn:hover { background: #333; color: #fff; }
-        .mode-toggle { border-color: #444; }
-        .mode-active { background: #fff; color: #000; border-color: #fff; }
-        .help { margin-top: 20px; font-size: 0.85em; color: #666; text-align: center; font-family: 'JetBrains Mono', monospace; }
-        #props-panel label { margin-left: 15px; font-size: 12px; color: #888; font-family: 'JetBrains Mono', monospace; }
-        #props-panel input { background: #000; color: #00d2ff; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+        .action-btn { background: #555; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .action-btn:hover { background: #777; }
+        .mode-toggle { background: #e67e22; font-weight: bold; }
+        .mode-active { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
+        .help { margin-top: 20px; font-size: 0.9em; color: #aaa; text-align: center; }
+        #props-panel label { margin-left: 15px; font-size: 14px; }
+        #props-panel input { background: #222; color: white; border: 1px solid #666; padding: 3px; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -101,15 +98,6 @@
         let lastTime = 0;
         let testPlayer = { x: 0, y: 0, vx: 0, vy: 0, width: 20, height: 20, jumping: false };
         let keys = {};
-        const colors = {
-            'PLATFORM': '#2f3542',
-            'SPIKE': '#ff4757',
-            'GOAL': '#ffa502',
-            'SPAWN': '#2ed573',
-            'PORTAL_SHRINK': '#9c88ff',
-            'PORTAL_NORMAL': '#00a8ff',
-            'PORTAL_GROW': '#e1b12c'
-        };
         const gravity = 2200;
         const jumpForce = -750;
         const moveSpeed = 450;
@@ -372,32 +360,18 @@
         };
 
         function render(timestamp) {
-            ctx.fillStyle = "#111"; // Dark background
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Grid
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 40) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += 40) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-            
-            let dt = 0;
-            if (timestamp !== undefined) {
-                if (!lastTime) lastTime = timestamp;
-                dt = (timestamp - lastTime) / 1000;
-                if (dt > 0.1) dt = 0.1;
-                lastTime = timestamp;
-                gameTime += dt * 2;
-            }
+            if (!lastTime) lastTime = timestamp;
+            let dt = timestamp ? (timestamp - lastTime) / 1000 : 0;
+            if (dt > 0.1) dt = 0.1;
+            lastTime = timestamp;
 
             const time = timestamp ? timestamp / 1000 : 0;
+            gameTime += dt * 2;
            
             // --- PHYSICS UPDATE (ONLY IN TEST MODE) ---
-            if (isTestMode && timestamp !== undefined) {
+            if (isTestMode) {
                 // Horizontal
                 if (keys['ArrowLeft'] || keys['KeyA']) testPlayer.vx = -moveSpeed;
                 else if (keys['ArrowRight'] || keys['KeyD']) testPlayer.vx = moveSpeed;
@@ -444,10 +418,9 @@
                                     }
                                 }
                             } else if (o.type === 'SPIKE') {
-                                toggleTestMode(); toggleTestMode(); 
+                                toggleTestMode(); toggleTestMode();
                             } else if (o.type === 'GOAL') {
-                                alert("Level Complete!");
-                                toggleTestMode();
+                                alert("Level Complete!"); toggleTestMode();
                             }
                         }
                     } else {
@@ -498,19 +471,8 @@
 
                 ctx.translate(drawX + o.width / 2, drawY + o.height / 2);
                 ctx.rotate(drawAngle * Math.PI / 180);
-                
-                const color = colors[o.type] || '#fff';
-                const glow = o.type !== 'PLATFORM' && o.type !== 'SPAWN';
-                
-                if (glow) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = color;
-                }
-                
-                ctx.fillStyle = color;
+                ctx.fillStyle = colors[o.type] || '#fff';
                 ctx.fillRect(-o.width / 2, -o.height / 2, o.width, o.height);
-                
-                ctx.shadowBlur = 0;
                 ctx.restore();
 
                 if (o.isMoving) {
@@ -527,14 +489,11 @@
             });
 
             if (isTestMode) {
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = '#00d2ff';
-                ctx.fillStyle = '#00d2ff';
+                ctx.fillStyle = '#ff4757';
                 ctx.fillRect(testPlayer.x, testPlayer.y, testPlayer.width, testPlayer.height);
-                ctx.shadowBlur = 0;
             }
 
-            if (isTestMode || objects.some(o => o.isSpinning || o.isMoving) || isDrawing) {
+            if (isTestMode || objects.some(o => o.isSpinning || o.isMoving)) {
                 requestAnimationFrame(render);
             }
 

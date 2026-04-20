@@ -3,8 +3,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx server.ts",
-    "dev": "tsx server.ts",
-    "build": "echo 'No build step required'"
+    "dev": "tsx server.ts"
   },
   "dependencies": {
     "express": "^4.21.2"
