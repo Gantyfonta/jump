@@ -11,6 +11,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && isEmailVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "nineteenp2@gmail.com"
+      );
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -21,25 +32,29 @@ service cloud.firestore {
 
     // Highscores collection
     match /highscores/{scoreId} {
-      // Anyone can read highscores to see the leaderboard
-      // Use list to allow queries for top scores
       allow list: if true;
       allow get: if true;
 
-      // Creating a score
-      // - Must be signed in
-      // - Must set their own userId
-      // - time must be a positive number
-      // - createdAt must be server time
       allow create: if isSignedIn() 
         && isValidId(scoreId)
         && incoming().userId == request.auth.uid
         && incoming().time is number && incoming().time > 0
         && incoming().userName is string && incoming().userName.size() > 0 && incoming().userName.size() <= 20
         && incoming().createdAt == request.time;
+      
+      allow update, delete: if isAdmin();
+    }
 
-      // Highscores are immutable (once submitted, cannot be changed)
-      allow update, delete: if false;
+    // Announcements collection
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admins collection (read-only for self, write for existing admins)
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && request.auth.uid == adminId;
+      allow write: if isAdmin();
     }
   }
 }

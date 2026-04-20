@@ -8,6 +8,7 @@
 </head>
 <body>
     <div id="game-container">
+        <div id="announcement-banner" style="display: none;"></div>
         <canvas id="gameCanvas"></canvas>
         <div id="ui" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; width: 780px; padding: 0 10px;">
@@ -28,7 +29,9 @@
                 <button onclick="showLeaderboard()">High Scores</button>
                 <button onclick="showControls()">Controls</button>
                 <button onclick="window.location.href='editor.html'">Level Editor</button>
+                <button id="admin-panel-btn" onclick="showAdminPanel()" style="display: none; background: #3498db; box-shadow: 0 4px #2980b9;">Admin Panel</button>
             </div>
+            <p id="admin-login-link" onclick="adminLogin()" style="font-size: 10px; opacity: 0.3; margin-top: 20px; cursor: pointer;">Admin Login</p>
         </div>
 
         <!-- Controls Screen -->
@@ -63,6 +66,19 @@
                 <button id="submit-score-btn" onclick="submitScore()" style="padding: 10px 20px;">Submit Score</button>
             </div>
             <button onclick="resetRun()" style="margin-top: 20px; background: #555; box-shadow: 0 4px #333;">Back to Menu</button>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin-panel" class="overlay" style="display: none;">
+            <h2>ADMIN PANEL</h2>
+            <div style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px;">
+                <textarea id="announcement-input" placeholder="Global announcement message..." rows="3" style="padding: 10px; border-radius: 5px; border: none; width: 100%; font-size: 16px;"></textarea>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="postAnnouncement()" style="flex: 1; padding: 10px;">Post/Update</button>
+                    <button onclick="clearAnnouncement()" style="flex: 1; padding: 10px; background: #ff4757; box-shadow: 0 4px #c0392b;">Clear All</button>
+                </div>
+            </div>
+            <button onclick="showTitle()" style="margin-top: 30px; background: #555; box-shadow: 0 4px #333;">Back</button>
         </div>
     </div>
     <script type="module" src="script.js"></script>

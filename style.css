@@ -120,6 +120,26 @@ li {
     animation: blink 1s infinite;
 }
 
+#announcement-banner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #ffa502;
+    color: #000;
+    padding: 8px;
+    text-align: center;
+    font-weight: bold;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
 #highscore-list div {
     display: flex;
     justify-content: space-between;

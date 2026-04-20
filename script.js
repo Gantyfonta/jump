@@ -15,7 +15,10 @@ import {
     getDocs, 
     serverTimestamp,
     doc,
-    getDocFromServer
+    getDocFromServer,
+    onSnapshot,
+    setDoc,
+    deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
 
@@ -36,6 +39,30 @@ async function testConnection() {
     }
 }
 testConnection();
+
+// Global Announcement Listener
+onSnapshot(doc(db, "announcements", "global"), (doc) => {
+    const banner = document.getElementById('announcement-banner');
+    if (doc.exists() && doc.data().active) {
+        banner.innerText = doc.data().message;
+        banner.style.display = 'block';
+    } else {
+        banner.style.display = 'none';
+    }
+});
+
+// Admin Detection
+onAuthStateChanged(auth, (user) => {
+    const adminBtn = document.getElementById('admin-panel-btn');
+    const loginLink = document.getElementById('admin-login-link');
+    if (user && user.email === "nineteenp2@gmail.com") {
+        adminBtn.style.display = 'block';
+        if (loginLink) loginLink.style.display = 'none';
+    } else {
+        adminBtn.style.display = 'none';
+        if (loginLink) loginLink.style.display = 'block';
+    }
+});
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -198,6 +225,54 @@ function showTitle() {
     document.getElementById('title-screen').style.display = 'flex';
     document.getElementById('controls-screen').style.display = 'none';
     document.getElementById('leaderboard-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'none';
+}
+
+function showAdminPanel() {
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'flex';
+}
+
+async function postAnnouncement() {
+    const input = document.getElementById('announcement-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    try {
+        await setDoc(doc(db, "announcements", "global"), {
+            message: message,
+            active: true,
+            createdAt: serverTimestamp()
+        });
+        alert("Announcement posted!");
+    } catch (e) {
+        console.error(e);
+        alert("Permission denied. Only the admin can post.");
+    }
+}
+
+async function clearAnnouncement() {
+    try {
+        await setDoc(doc(db, "announcements", "global"), {
+            message: "",
+            active: false,
+            createdAt: serverTimestamp()
+        });
+        document.getElementById('announcement-input').value = "";
+        alert("Announcement cleared.");
+    } catch (e) {
+        console.error(e);
+        alert("Permission denied.");
+    }
+}
+
+async function adminLogin() {
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (e) {
+        console.error(e);
+        alert("Login failed.");
+    }
 }
 
 async function showLeaderboard() {
@@ -525,6 +600,10 @@ window.showTitle = showTitle;
 window.showLeaderboard = showLeaderboard;
 window.submitScore = submitScore;
 window.remapKey = remapKey;
+window.showAdminPanel = showAdminPanel;
+window.postAnnouncement = postAnnouncement;
+window.clearAnnouncement = clearAnnouncement;
+window.adminLogin = adminLogin;
 
 // START THE GAME
 requestAnimationFrame(update);
