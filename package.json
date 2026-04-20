@@ -3,7 +3,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx server.ts",
-    "dev": "tsx server.ts"
+    "dev": "tsx server.ts",
+    "lint": "tsc --noEmit",
+    "build": "tsc"
   },
   "dependencies": {
     "express": "^4.21.2"

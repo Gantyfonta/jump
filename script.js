@@ -71,6 +71,53 @@ canvas.width = 800;
 canvas.height = 400;
 
 // --- 1. SETTINGS & VARIABLES ---
+let mobileMode = localStorage.getItem('platformer_mobile') === 'true';
+let sfxEnabled = localStorage.getItem('platformer_sfx') !== 'false';
+
+// --- AUDIO SYSTEM ---
+class SoundEngine {
+    constructor() {
+        this.ctx = null;
+    }
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+    play(freq, duration, type = 'sine', volume = 0.1, ramp = true) {
+        if (!sfxEnabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if (ramp) {
+            osc.frequency.exponentialRampToValueAtTime(freq * 0.01, this.ctx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+    jump() { this.play(500, 0.15, 'sine', 0.12); }
+    land() { this.play(100, 0.1, 'triangle', 0.1, false); }
+    death() { this.play(200, 0.4, 'sawtooth', 0.1); }
+    portal() { this.play(800, 0.2, 'square', 0.06); }
+    click() { this.play(1000, 0.05, 'sine', 0.1, false); }
+    win() {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((f, i) => {
+            setTimeout(() => this.play(f, 0.3, 'sine', 0.1), i * 100);
+        });
+    }
+}
+const sfx = new SoundEngine();
+
 const gravity = 2200;    
 const friction = 0.001;  
 const jumpForce = -750; 
@@ -106,9 +153,10 @@ function setShake(amount, duration) {
     shakeTime = duration;
 }
 
-let lastTime = 0; 
+const lastTime = 0; 
 let gameTime = 0; 
-const keys = {}; // Fixed: Added missing keys object
+const keys = {}; 
+const touchKeys = { left: false, right: false, jump: false };
 
 // Speedrun Timer
 let startTime = 0;
@@ -283,6 +331,38 @@ function saveControls() {
 }
 
 // --- UI MANAGEMENT ---
+function toggleMobileMode() {
+    mobileMode = !mobileMode;
+    localStorage.setItem('platformer_mobile', mobileMode);
+    updateSettingsUI();
+    sfx.click();
+}
+
+function toggleSFX() {
+    sfxEnabled = !sfxEnabled;
+    localStorage.setItem('platformer_sfx', sfxEnabled);
+    updateSettingsUI();
+    if (sfxEnabled) sfx.click();
+}
+
+function updateSettingsUI() {
+    const mobileBtn = document.getElementById('toggle-mobile');
+    const sfxBtn = document.getElementById('toggle-sfx');
+    const touchControls = document.getElementById('touch-controls');
+
+    if (mobileBtn) {
+        mobileBtn.innerText = mobileMode ? 'ON' : 'OFF';
+        mobileBtn.className = mobileMode ? 'active' : '';
+    }
+    if (sfxBtn) {
+        sfxBtn.innerText = sfxEnabled ? 'ON' : 'OFF';
+        sfxBtn.className = sfxEnabled ? 'active' : '';
+    }
+    if (touchControls) {
+        touchControls.style.display = (mobileMode && gameState === 'PLAYING') ? 'flex' : 'none';
+    }
+}
+
 function startGame() {
     gameState = 'PLAYING';
     document.getElementById('title-screen').style.display = 'none';
@@ -290,6 +370,9 @@ function startGame() {
     document.getElementById('leaderboard-screen').style.display = 'none';
     document.getElementById('win-screen').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
+    
+    updateSettingsUI();
+    sfx.click();
     
     // Reset timer state but wait for movement
     timerRunning = false;
@@ -323,6 +406,7 @@ function showControls() {
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'flex';
     document.getElementById('leaderboard-screen').style.display = 'none';
+    updateSettingsUI();
     // Update button labels
     for (let action in controls) {
         document.getElementById(`key-${action}`).innerText = controls[action];
@@ -524,6 +608,7 @@ async function submitScore() {
 // --- PORTAL LOGIC ---
 function setPlayerSize(newSize) {
     if (player.width === newSize) return; 
+    sfx.portal();
     setShake(5, 0.15);
     spawnParticles(player.x + player.width/2, player.y + player.height/2, player.color, 15);
     let heightDiff = newSize - player.height;
@@ -544,6 +629,7 @@ function initLevel() {
 }
 
 function respawn() {
+    sfx.death();
     setShake(10, 0.2);
     spawnParticles(player.x + player.width/2, player.y + player.height/2, player.color, 25);
     player.x = spawnPoint.x;
@@ -558,8 +644,10 @@ function respawn() {
 function nextLevel() {
     currentLevelIndex++;
     if (currentLevelIndex < LEVEL_DATABASE.length) {
+        sfx.portal();
         initLevel();
     } else {
+        sfx.win();
         timerRunning = false;
         timerFinished = true;
         gameState = 'WIN';
@@ -596,6 +684,32 @@ window.addEventListener('keydown', (e) => {
     }
 });
 window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+// Touch Listeners
+function setupTouchEvents() {
+    const attach = (id, key) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            touchKeys[key] = true;
+            sfx.init(); // Initialize audio on first interaction
+        });
+        el.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            touchKeys[key] = false;
+        });
+        el.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            touchKeys[key] = false;
+        });
+    };
+    attach('touch-left', 'left');
+    attach('touch-right', 'right');
+    attach('touch-jump', 'jump');
+}
+setupTouchEvents();
+updateSettingsUI();
 
 // 6. GAME ENGINE
 function update(timestamp) {
@@ -655,7 +769,7 @@ function update(timestamp) {
 
     // --- 2. TIMER ---
     if (!timerRunning && !timerFinished) {
-        if (keys[controls.jump] || keys[controls.left] || keys[controls.right]) {
+        if (keys[controls.jump] || keys[controls.left] || keys[controls.right] || touchKeys.jump || touchKeys.left || touchKeys.right) {
             startTime = Date.now();
             timerRunning = true;
         }
@@ -666,18 +780,19 @@ function update(timestamp) {
     }
 
     // --- 3. INPUTS & PHYSICS ---
-    if (keys[controls.jump] && player.coyoteCounter > 0) {
+    if ((keys[controls.jump] || touchKeys.jump) && player.coyoteCounter > 0) {
         player.velY = jumpForce;
         player.jumping = true;
         player.coyoteCounter = 0; // Use up coyote time immediately
+        sfx.jump();
     }
     
     player.coyoteCounter -= dt;
     
-    if (keys[controls.left]) {
+    if (keys[controls.left] || touchKeys.left) {
         player.velX -= acceleration * dt;
         addTrail(player.x, player.y, player.width, player.height, player.color);
-    } else if (keys[controls.right]) {
+    } else if (keys[controls.right] || touchKeys.right) {
         player.velX += acceleration * dt;
         addTrail(player.x, player.y, player.width, player.height, player.color);
     } else {
@@ -738,6 +853,7 @@ function update(timestamp) {
                     if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= physY + 10) { 
                         if (player.jumping) {
                             spawnParticles(player.x + player.width/2, physY, '#fff', 5);
+                            sfx.land();
                         }
                         player.jumping = false;
                         player.coyoteCounter = coyoteTime;
@@ -896,6 +1012,9 @@ window.clearAnnouncement = clearAnnouncement;
 window.adminLogin = adminLogin;
 window.loadAdminScores = loadAdminScores;
 window.deleteScore = deleteScore;
+window.toggleMobileMode = toggleMobileMode;
+window.toggleSFX = toggleSFX;
+window.setPlayerSize = setPlayerSize;
 
 // START THE GAME
 requestAnimationFrame(update);
