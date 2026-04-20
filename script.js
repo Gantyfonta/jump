@@ -78,6 +78,34 @@ const moveSpeed = 450;
 const acceleration = 2500; 
 const coyoteTime = 0.15; // Seconds of coyote time
 
+// --- JUICE & POLISH ---
+let particles = [];
+let trails = [];
+let screenShake = 0;
+let shakeTime = 0;
+
+function spawnParticles(x, y, color, count = 10) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 400,
+            vy: (Math.random() - 0.5) * 400,
+            life: 0.5 + Math.random() * 0.5,
+            color,
+            size: 2 + Math.random() * 4
+        });
+    }
+}
+
+function addTrail(x, y, w, h, color) {
+    trails.push({ x, y, w, h, color, life: 0.3 });
+}
+
+function setShake(amount, duration) {
+    screenShake = amount;
+    shakeTime = duration;
+}
+
 let lastTime = 0; 
 let gameTime = 0; 
 const keys = {}; // Fixed: Added missing keys object
@@ -167,7 +195,7 @@ const player = {
     velY: 0,
     jumping: false,
     coyoteCounter: 0,
-    color: '#ff4757'
+    color: '#00d2ff'
 };
 
 // 3. THE LEVEL DATABASE
@@ -496,6 +524,8 @@ async function submitScore() {
 // --- PORTAL LOGIC ---
 function setPlayerSize(newSize) {
     if (player.width === newSize) return; 
+    setShake(5, 0.15);
+    spawnParticles(player.x + player.width/2, player.y + player.height/2, player.color, 15);
     let heightDiff = newSize - player.height;
     player.width = newSize;
     player.height = newSize;
@@ -514,6 +544,8 @@ function initLevel() {
 }
 
 function respawn() {
+    setShake(10, 0.2);
+    spawnParticles(player.x + player.width/2, player.y + player.height/2, player.color, 25);
     player.x = spawnPoint.x;
     player.y = spawnPoint.y;
     player.width = 30; 
@@ -600,6 +632,27 @@ function update(timestamp) {
         }
     });
 
+    // Update Particles
+    particles = particles.filter(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        return p.life > 0;
+    });
+
+    // Update Trails
+    trails = trails.filter(t => {
+        t.life -= dt;
+        return t.life > 0;
+    });
+
+    // Update Shake
+    if (shakeTime > 0) {
+        shakeTime -= dt;
+    } else {
+        screenShake = 0;
+    }
+
     // --- 2. TIMER ---
     if (!timerRunning && !timerFinished) {
         if (keys[controls.jump] || keys[controls.left] || keys[controls.right]) {
@@ -623,8 +676,10 @@ function update(timestamp) {
     
     if (keys[controls.left]) {
         player.velX -= acceleration * dt;
+        addTrail(player.x, player.y, player.width, player.height, player.color);
     } else if (keys[controls.right]) {
         player.velX += acceleration * dt;
+        addTrail(player.x, player.y, player.width, player.height, player.color);
     } else {
         player.velX *= Math.pow(friction, dt);
     }
@@ -681,6 +736,9 @@ function update(timestamp) {
                 player.y < physY + obj.height && player.y + player.height > physY) {
                 if (obj.type === 'PLATFORM') {
                     if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= physY + 10) { 
+                        if (player.jumping) {
+                            spawnParticles(player.x + player.width/2, physY, '#fff', 5);
+                        }
                         player.jumping = false;
                         player.coyoteCounter = coyoteTime;
                         player.velY = 0;
@@ -735,27 +793,93 @@ function update(timestamp) {
 
 // 7. DRAWING FUNCTION
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    
+    // Background Grid
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+    ctx.lineWidth = 1;
+    const gridSize = 40;
+    for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
+
+    // Apply Shake
+    if (shakeTime > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+    }
+
+    // Draw Trails
+    trails.forEach(t => {
+        ctx.globalAlpha = t.life * 2;
+        ctx.fillStyle = t.color;
+        ctx.fillRect(t.x, t.y, t.w, t.h);
+    });
+    ctx.globalAlpha = 1;
     
     worldObjects.forEach(obj => {
         ctx.save();
         ctx.translate(obj.currentX + obj.width / 2, obj.currentY + obj.height / 2);
         ctx.rotate((obj.currentAngle || 0) * Math.PI / 180);
         
-        if (obj.type === 'PLATFORM') ctx.fillStyle = '#2f3542';
-        else if (obj.type === 'SPIKE') ctx.fillStyle = '#ff4757';
-        else if (obj.type === 'GOAL') ctx.fillStyle = '#ffa502';
-        else if (obj.type === 'SPAWN') ctx.fillStyle = '#2ed573';
-        else if (obj.type === 'PORTAL_SHRINK') ctx.fillStyle = '#9c88ff';
-        else if (obj.type === 'PORTAL_GROW') ctx.fillStyle = '#e1b12c';
-        else if (obj.type === 'PORTAL_NORMAL') ctx.fillStyle = '#00a8ff';
+        let color = '#fff';
+        let glow = false;
         
+        if (obj.type === 'PLATFORM') {
+            color = '#2f3542';
+            ctx.strokeStyle = '#3f4552';
+            ctx.lineWidth = 1;
+        }
+        else if (obj.type === 'SPIKE') {
+            color = '#ff4757';
+            glow = true;
+        }
+        else if (obj.type === 'GOAL') {
+            color = '#ffa502';
+            glow = true;
+        }
+        else if (obj.type === 'SPAWN') color = '#2ed573';
+        else if (obj.type === 'PORTAL_SHRINK') { color = '#9c88ff'; glow = true; }
+        else if (obj.type === 'PORTAL_GROW') { color = '#e1b12c'; glow = true; }
+        else if (obj.type === 'PORTAL_NORMAL') { color = '#00a8ff'; glow = true; }
+        
+        if (glow) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+        }
+        
+        ctx.fillStyle = color;
         ctx.fillRect(-obj.width / 2, -obj.height / 2, obj.width, obj.height);
+        
         ctx.restore();
     });
 
+    // Draw Particles
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+    });
+    ctx.globalAlpha = 1;
+
+    // Draw Player
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = player.color;
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
+    
+    ctx.restore();
 }
 
 // Expose functions for inline HTML event handlers (since script is now type="module")
