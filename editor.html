@@ -24,6 +24,8 @@
         .mode-toggle { background: #e67e22; font-weight: bold; }
         .mode-active { background: #2ecc71; box-shadow: 0 0 10px #2ecc71; }
         .help { margin-top: 20px; font-size: 0.9em; color: #aaa; text-align: center; }
+        #props-panel label { margin-left: 15px; font-size: 14px; }
+        #props-panel input { background: #222; color: white; border: 1px solid #666; padding: 3px; border-radius: 3px; }
     </style>
 </head>
 <body>
@@ -61,6 +63,14 @@
     </div>
    
     <canvas id="editorCanvas" width="800" height="400"></canvas>
+    
+    <div id="props-panel" class="toolbar" style="display: none; background: #444; border: 1px solid #666;">
+        <span style="font-weight: bold; color: #2ecc71;">Object Properties:</span>
+        <label>Spin Speed: <input type="number" id="prop-spin" step="1" style="width: 60px;" oninput="updateProp('spinSpeed', this.value)"></label>
+        <label>Move Speed (Freq): <input type="number" id="prop-move" step="0.1" style="width: 60px;" oninput="updateProp('moveSpeed', this.value)"></label>
+        <span style="font-size: 10px; color: #aaa; margin-left: 10px;">(Select object to edit)</span>
+    </div>
+
     <textarea id="output" placeholder="Paste code here and click 'Import Code' to edit..."></textarea>
 
     <div class="help">
@@ -84,6 +94,8 @@
 
         // --- TEST MODE VARIABLES ---
         let isTestMode = false;
+        let gameTime = 0;
+        let lastTime = 0;
         let testPlayer = { x: 0, y: 0, vx: 0, vy: 0, width: 20, height: 20, jumping: false };
         let keys = {};
         const gravity = 2200;
@@ -97,6 +109,20 @@
             const btnId = m.toLowerCase() + 'Btn';
             document.getElementById(btnId).classList.add('mode-active');
             selectedObj = null;
+            document.getElementById('props-panel').style.display = 'none';
+        }
+
+        function updateProp(prop, val) {
+            if (selectedObj) {
+                // Determine if we should set a boolean flag
+                if (prop === 'spinSpeed') {
+                    selectedObj.spinSpeed = parseFloat(val);
+                    selectedObj.isSpinning = selectedObj.spinSpeed !== 0;
+                } else if (prop === 'moveSpeed') {
+                    selectedObj.moveSpeed = parseFloat(val);
+                }
+                render();
+            }
         }
 
         function clearTrajectory() {
@@ -198,6 +224,7 @@
                 isDrawing = true;
                 startX = mx; startY = my;
                 curX = mx; curY = my;
+                document.getElementById('props-panel').style.display = 'none';
             } else {
                 selectedObj = objects.find(o => mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height);
                 if (selectedObj) {
@@ -211,6 +238,15 @@
                     } else if (currentMode === 'ROTATE' || currentMode === 'TRAJECTORY') {
                         startX = mx; startY = my;
                     }
+
+                    // Show properties if relevant
+                    if (selectedObj && currentMode !== 'DELETE') {
+                        document.getElementById('props-panel').style.display = 'flex';
+                        document.getElementById('prop-spin').value = selectedObj.spinSpeed || 0;
+                        document.getElementById('prop-move').value = selectedObj.moveSpeed || 1;
+                    }
+                } else {
+                    document.getElementById('props-panel').style.display = 'none';
                 }
             }
             render();
@@ -274,12 +310,16 @@
         function render(timestamp) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            if (!lastTime) lastTime = timestamp;
+            let dt = timestamp ? (timestamp - lastTime) / 1000 : 0;
+            if (dt > 0.1) dt = 0.1;
+            lastTime = timestamp;
+
             const time = timestamp ? timestamp / 1000 : 0;
+            gameTime += dt * 2;
            
             // --- PHYSICS UPDATE (ONLY IN TEST MODE) ---
             if (isTestMode) {
-                const dt = 1/60; // Assume 60fps for simple editor test
-                
                 // Horizontal
                 if (keys['ArrowLeft'] || keys['KeyA']) testPlayer.vx = -moveSpeed;
                 else if (keys['ArrowRight'] || keys['KeyD']) testPlayer.vx = moveSpeed;
@@ -290,16 +330,24 @@
                 // Move Y
                 testPlayer.y += testPlayer.vy * dt;
                 objects.forEach(o => {
+                    const progress = o.isMoving ? (Math.sin(gameTime * (o.moveSpeed || 1)) + 1) / 2 : 0;
+                    const curX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
+                    const curY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
+
+                    // IMPORTANT: If rotating, use base x,y (visual only)
+                    const physX = o.isSpinning ? o.x : curX;
+                    const physY = o.isSpinning ? o.y : curY;
+
                     if (o.type === 'PLATFORM' && 
-                        testPlayer.x < o.x + o.width && testPlayer.x + testPlayer.width > o.x &&
-                        testPlayer.y < o.y + o.height && testPlayer.y + testPlayer.height > o.y) {
+                        testPlayer.x < physX + o.width && testPlayer.x + testPlayer.width > physX &&
+                        testPlayer.y < physY + o.height && testPlayer.y + testPlayer.height > physY) {
                         
                         if (testPlayer.vy > 0) {
-                            testPlayer.y = o.y - testPlayer.height;
+                            testPlayer.y = physY - testPlayer.height;
                             testPlayer.vy = 0;
                             testPlayer.jumping = false;
                         } else {
-                            testPlayer.y = o.y + o.height;
+                            testPlayer.y = physY + o.height;
                             testPlayer.vy = 0;
                         }
                     }
@@ -308,12 +356,19 @@
                 // Move X
                 testPlayer.x += testPlayer.vx * dt;
                 objects.forEach(o => {
-                    if (testPlayer.x < o.x + o.width && testPlayer.x + testPlayer.width > o.x &&
-                        testPlayer.y < o.y + o.height && testPlayer.y + testPlayer.height > o.y) {
+                    const progress = o.isMoving ? (Math.sin(gameTime * (o.moveSpeed || 1)) + 1) / 2 : 0;
+                    const curX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
+                    const curY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
+
+                    const physX = o.isSpinning ? o.x : curX;
+                    const physY = o.isSpinning ? o.y : curY;
+
+                    if (testPlayer.x < physX + o.width && testPlayer.x + testPlayer.width > physX &&
+                        testPlayer.y < physY + o.height && testPlayer.y + testPlayer.height > physY) {
                         
                         if (o.type === 'PLATFORM') {
-                            if (testPlayer.vx > 0) testPlayer.x = o.x - testPlayer.width;
-                            else if (testPlayer.vx < 0) testPlayer.x = o.x + o.width;
+                            if (testPlayer.vx > 0) testPlayer.x = physX - testPlayer.width;
+                            else if (testPlayer.vx < 0) testPlayer.x = physX + o.width;
                         } else if (o.type === 'SPIKE') {
                             toggleTestMode(); toggleTestMode(); // Quick reset
                         } else if (o.type === 'GOAL') {
@@ -335,7 +390,11 @@
                     drawAngle += (o.spinSpeed || 0) * time;
                 }
                 
-                ctx.translate(o.x + o.width / 2, o.y + o.height / 2);
+                const progress = o.isMoving ? (Math.sin(gameTime * (o.moveSpeed || 1)) + 1) / 2 : 0;
+                const drawX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
+                const drawY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
+
+                ctx.translate(drawX + o.width / 2, drawY + o.height / 2);
                 ctx.rotate(drawAngle * Math.PI / 180);
                 ctx.fillStyle = colors[o.type] || '#fff';
                 ctx.fillRect(-o.width / 2, -o.height / 2, o.width, o.height);

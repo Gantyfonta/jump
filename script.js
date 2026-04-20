@@ -145,7 +145,14 @@ const LEVEL_DATABASE = [
         {"x":5.5,"y":45.1875,"width":84,"height":17,"type":"PLATFORM"},{"x":129.5,"y":0.1875,"width":20,"height":59,"type":"PLATFORM"},{"x":22.5,"y":6.1875,"width":19,"height":22,"type":"SPAWN"},{"x":-0.5,"y":148.1875,"width":147,"height":25,"type":"SPIKE"},{"x":144.5,"y":149.1875,"width":74,"height":29,"type":"SPIKE"},{"x":-0.5,"y":162.1875,"width":238,"height":62,"type":"PLATFORM"},{"x":184.5,"y":94.1875,"width":180,"height":131,"type":"PLATFORM"},{"x":409.5,"y":-0.8125,"width":15,"height":228,"type":"PLATFORM"},{"x":302.5,"y":319.1875,"width":125,"height":28,"type":"SPIKE"},{"x":117.5,"y":326.1875,"width":191,"height":21,"type":"PLATFORM"},{"x":6.5,"y":393.1875,"width":794,"height":14,"type":"PLATFORM"},{"x":-0.5,"y":217.1875,"width":35,"height":190,"type":"PLATFORM"},{"x":417.5,"y":219.1875,"width":7,"height":107,"type":"SPIKE"},{"x":416.5,"y":218.1875,"width":265,"height":8,"type":"PLATFORM"},{"x":484.5,"y":350.1875,"width":30,"height":12,"type":"PLATFORM"},{"x":582.5,"y":305.1875,"width":50,"height":47,"type":"PLATFORM"},{"x":709.5,"y":288.1875,"width":79,"height":11,"type":"PLATFORM"},{"x":593.5,"y":4.1875,"width":9,"height":82,"type":"PLATFORM"},{"x":590.5,"y":-0.8125,"width":211,"height":9,"type":"PLATFORM"},{"x":599.5,"y":78.1875,"width":142,"height":8,"type":"PLATFORM"},{"x":743.5,"y":80.1875,"width":58,"height":7,"type":"PLATFORM","tx":683.5,"ty":79.1875,"isMoving":true},{"x":613.5,"y":24.1875,"width":31,"height":26,"type":"GOAL"},{"x":618.5,"y":62.1875,"width":39,"height":15,"type":"PORTAL_SHRINK"},{"x":654.5,"y":134.1875,"width":100,"height":20,"type":"PLATFORM"}
     ],
 
-[{"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},{"x":225,"y":139.1875,"width":70,"height":244,"type":"PLATFORM"},{"x":523,"y":70.1875,"width":80,"height":315,"type":"PLATFORM"},{"x":192,"y":298.1875,"width":41,"height":23,"type":"PLATFORM"},{"x":191,"y":223.1875,"width":38,"height":25,"type":"PLATFORM"},{"x":193,"y":160.1875,"width":45,"height":25,"type":"PLATFORM"},{"x":450.875,"y":69.9140625,"width":74,"height":20,"type":"PLATFORM","tx":448.875,"ty":379.9140625,"isMoving":true},{"x":500,"y":283.9971618652344,"width":29,"height":37,"type":"PLATFORM"},{"x":459,"y":201.99716186523438,"width":32,"height":32,"type":"PLATFORM"},{"x":500,"y":122.99716186523438,"width":33,"height":42,"type":"PLATFORM"},{"x":542.75,"y":64.671875,"width":45,"height":6,"type":"SPIKE","tx":542.75,"ty":71.671875,"isMoving":true},{"x":12.75,"y":329.671875,"width":24,"height":19,"type":"SPAWN"},{"x":260.75,"y":126.671875,"width":36,"height":15,"type":"PORTAL_SHRINK"},{"x":602.75,"y":361.671875,"width":200,"height":46,"type":"SPIKE"},{"x":694.75,"y":24.671875,"width":45,"height":40,"type":"GOAL"},{"x":527.75,"y":62.671875,"width":13,"height":9,"type":"PORTAL_NORMAL"}]
+[
+    {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},{"x":225,"y":139.1875,"width":70,"height":244,"type":"PLATFORM"},{"x":523,"y":70.1875,"width":80,"height":315,"type":"PLATFORM"},{"x":192,"y":298.1875,"width":41,"height":23,"type":"PLATFORM"},{"x":191,"y":223.1875,"width":38,"height":25,"type":"PLATFORM"},{"x":193,"y":160.1875,"width":45,"height":25,"type":"PLATFORM"},{"x":450.875,"y":69.9140625,"width":74,"height":20,"type":"PLATFORM","tx":448.875,"ty":379.9140625,"isMoving":true},{"x":500,"y":283.9971618652344,"width":29,"height":37,"type":"PLATFORM"},{"x":459,"y":201.99716186523438,"width":32,"height":32,"type":"PLATFORM"},{"x":500,"y":122.99716186523438,"width":33,"height":42,"type":"PLATFORM"},{"x":542.75,"y":64.671875,"width":45,"height":6,"type":"SPIKE","tx":542.75,"ty":71.671875,"isMoving":true},{"x":12.75,"y":329.671875,"width":24,"height":19,"type":"SPAWN"},{"x":260.75,"y":126.671875,"width":36,"height":15,"type":"PORTAL_SHRINK"},{"x":602.75,"y":361.671875,"width":200,"height":46,"type":"SPIKE"},{"x":694.75,"y":24.671875,"width":45,"height":40,"type":"GOAL"},{"x":527.75,"y":62.671875,"width":13,"height":9,"type":"PORTAL_NORMAL"}
+    ],
+
+
+[
+    {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},{"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},{"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},{"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},{"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},{"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
+]
     
 ];
 
@@ -515,7 +522,8 @@ function update(timestamp) {
         if (obj.isMoving) {
             obj.oldX = obj.currentX || obj.x;
             obj.oldY = obj.currentY || obj.y;
-            let progress = (Math.sin(gameTime) + 1) / 2;
+            // Use moveSpeed as a frequency multiplier (default 1)
+            let progress = (Math.sin(gameTime * (obj.moveSpeed || 1)) + 1) / 2;
             obj.currentX = obj.x + (obj.tx - obj.x) * progress;
             obj.currentY = obj.y + (obj.ty - obj.y) * progress;
         } else {
@@ -568,20 +576,25 @@ function update(timestamp) {
     player.y += player.velY * dt; 
     
     worldObjects.forEach(obj => {
-        if (player.x < obj.currentX + obj.width && player.x + player.width > obj.currentX &&
-            player.y < obj.currentY + obj.height && player.y + player.height > obj.currentY) {
+        // If it's spinning, it's visual only - use static x,y for collision
+        const physX = obj.isSpinning ? obj.x : obj.currentX;
+        const physY = obj.isSpinning ? obj.y : obj.currentY;
+
+        if (player.x < physX + obj.width && player.x + player.width > physX &&
+            player.y < physY + obj.height && player.y + player.height > physY) {
             
             if (obj.type === 'PLATFORM') {
-                if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= obj.currentY + 10) { 
+                if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= physY + 10) { 
                     player.jumping = false;
                     player.coyoteCounter = coyoteTime; // Reset coyote time
                     player.velY = 0;
-                    player.y = obj.currentY - player.height;
-                    if (obj.isMoving) player.y += (obj.currentY - obj.oldY);
+                    player.y = physY - player.height;
+                    // Only add momentum if not visually spinning (static collision)
+                    if (obj.isMoving && !obj.isSpinning) player.y += (obj.currentY - obj.oldY);
                 } 
-                else if (player.velY < 0 && player.y - (player.velY * dt) >= obj.currentY + obj.height - 10) {
+                else if (player.velY < 0 && player.y - (player.velY * dt) >= physY + obj.height - 10) {
                     player.velY = 0;
-                    player.y = obj.currentY + obj.height;
+                    player.y = physY + obj.height;
                 }
             } 
             else if (obj.type === 'SPIKE') respawn();
@@ -596,19 +609,22 @@ function update(timestamp) {
     player.x += player.velX * dt;
     
     worldObjects.forEach(obj => {
-        if (obj.isMoving && !player.jumping && 
-            player.x < obj.currentX + obj.width && player.x + player.width > obj.currentX &&
-            player.y + player.height >= obj.currentY - 5 && player.y + player.height <= obj.currentY + 10) {
+        const physX = obj.isSpinning ? obj.x : obj.currentX;
+        const physY = obj.isSpinning ? obj.y : obj.currentY;
+
+        if (obj.isMoving && !obj.isSpinning && !player.jumping && 
+            player.x < physX + obj.width && player.x + player.width > physX &&
+            player.y + player.height >= physY - 5 && player.y + player.height <= physY + 10) {
             player.x += (obj.currentX - obj.oldX);
         }
 
-        if (player.x < obj.currentX + obj.width && player.x + player.width > obj.currentX &&
-            player.y < obj.currentY + obj.height && player.y + player.height > obj.currentY) {
+        if (player.x < physX + obj.width && player.x + player.width > physX &&
+            player.y < physY + obj.height && player.y + player.height > physY) {
             
             if (obj.type === 'PLATFORM') {
-                if (player.y + player.height > obj.currentY + 5) {
-                    if (player.velX > 0) { player.x = obj.currentX - player.width; player.velX = 0; }
-                    else if (player.velX < 0) { player.x = obj.currentX + obj.width; player.velX = 0; }
+                if (player.y + player.height > physY + 5) {
+                    if (player.velX > 0) { player.x = physX - player.width; player.velX = 0; }
+                    else if (player.velX < 0) { player.x = physX + obj.width; player.velX = 0; }
                 }
             } else if (obj.type === 'SPIKE') respawn();
             else if (obj.type === 'GOAL') nextLevel();
