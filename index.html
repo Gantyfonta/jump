@@ -15,7 +15,7 @@
                 <div style="width: 150px;">Level: <span id="level-display">1</span></div>
                 <div id="timer-display" style="font-family: monospace; font-weight: bold; font-size: 24px; flex: 1; text-align: center;">00:00.00</div>
                 <div style="width: 150px; text-align: right;">
-                    <button onclick="resetRun()" style="padding: 5px 10px; font-size: 12px; background: #ff4757; box-shadow: 0 2px #c0392b;">Reset Run</button>
+                    <!-- Reset button removed - 'R' key now handles reset run -->
                 </div>
             </div>
         </div>
@@ -41,7 +41,7 @@
                 <div class="control-item"><span>Move Left:</span> <button class="key-btn" id="key-left" onclick="remapKey('left')">ArrowLeft</button></div>
                 <div class="control-item"><span>Move Right:</span> <button class="key-btn" id="key-right" onclick="remapKey('right')">ArrowRight</button></div>
                 <div class="control-item"><span>Jump:</span> <button class="key-btn" id="key-jump" onclick="remapKey('jump')">Space</button></div>
-                <div class="control-item"><span>Reset Level:</span> <button class="key-btn" id="key-reset" onclick="remapKey('reset')">KeyR</button></div>
+                <div class="control-item"><span>Reset Run:</span> <button class="key-btn" id="key-reset" onclick="remapKey('reset')">KeyR</button></div>
                 <div class="control-item"><span>Back to Menu:</span> <button class="key-btn">Esc</button></div>
             </div>
             <p style="font-size: 14px; opacity: 0.7; margin-bottom: 20px;">Click a button then press any key to remap.</p>

@@ -193,22 +193,33 @@ function startGame() {
     document.getElementById('leaderboard-screen').style.display = 'none';
     document.getElementById('win-screen').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
-    startTime = Date.now();
-    timerRunning = true;
-    initLevel();
-}
-
-function resetRun() {
-    gameState = 'TITLE';
-    currentLevelIndex = 0;
+    
+    // Reset timer state but wait for movement
     timerRunning = false;
     timerFinished = false;
     elapsedTime = 0;
-    document.getElementById('title-screen').style.display = 'flex';
-    document.getElementById('controls-screen').style.display = 'none';
-    document.getElementById('leaderboard-screen').style.display = 'none';
-    document.getElementById('win-screen').style.display = 'none';
-    document.getElementById('ui').style.display = 'none';
+    document.getElementById('timer-display').innerText = "00:00.00";
+    
+    initLevel();
+}
+
+function resetRun(backToMenu = true) {
+    if (backToMenu) {
+        gameState = 'TITLE';
+        currentLevelIndex = 0;
+        timerRunning = false;
+        timerFinished = false;
+        elapsedTime = 0;
+        document.getElementById('title-screen').style.display = 'flex';
+        document.getElementById('controls-screen').style.display = 'none';
+        document.getElementById('leaderboard-screen').style.display = 'none';
+        document.getElementById('win-screen').style.display = 'none';
+        document.getElementById('ui').style.display = 'none';
+    } else {
+        // Auto-play: Reset run but keep level at 0 and start immediately
+        currentLevelIndex = 0;
+        startGame();
+    }
 }
 
 function showControls() {
@@ -477,10 +488,10 @@ window.addEventListener('keydown', (e) => {
         window.location.href = 'editor.html';
     }
     if (e.key === 'Escape') {
-        resetRun();
+        resetRun(true);
     }
-    if (e.code === controls.reset && gameState === 'PLAYING') {
-        respawn();
+    if (e.code === controls.reset && (gameState === 'PLAYING' || gameState === 'WIN')) {
+        resetRun(false);
     }
 });
 window.addEventListener('keyup', (e) => keys[e.code] = false);
