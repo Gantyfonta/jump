@@ -25,6 +25,7 @@
             <p>Speedrun Edition</p>
             <div class="menu-buttons">
                 <button onclick="startGame()">Start Game</button>
+                <button onclick="showLeaderboard()">High Scores</button>
                 <button onclick="showControls()">Controls</button>
                 <button onclick="window.location.href='editor.html'">Level Editor</button>
             </div>
@@ -38,11 +39,32 @@
                 <div class="control-item"><span>Move Right:</span> <button class="key-btn" id="key-right" onclick="remapKey('right')">ArrowRight</button></div>
                 <div class="control-item"><span>Jump:</span> <button class="key-btn" id="key-jump" onclick="remapKey('jump')">Space</button></div>
                 <div class="control-item"><span>Reset Level:</span> <button class="key-btn" id="key-reset" onclick="remapKey('reset')">KeyR</button></div>
+                <div class="control-item"><span>Back to Menu:</span> <button class="key-btn">Esc</button></div>
             </div>
             <p style="font-size: 14px; opacity: 0.7; margin-bottom: 20px;">Click a button then press any key to remap.</p>
             <button onclick="showTitle()">Back</button>
         </div>
+
+        <!-- Leaderboard Screen -->
+        <div id="leaderboard-screen" class="overlay" style="display: none;">
+            <h2>HIGH SCORES</h2>
+            <div id="highscore-list" style="margin-bottom: 20px; min-width: 300px;">
+                <p>Loading...</p>
+            </div>
+            <button onclick="showTitle()">Back</button>
+        </div>
+
+        <!-- Win Screen -->
+        <div id="win-screen" class="overlay" style="display: none;">
+            <h2>YOU WIN!</h2>
+            <p id="final-time-text" style="font-size: 24px; color: #2ed573;"></p>
+            <div style="margin-top: 20px;">
+                <input type="text" id="player-name-input" placeholder="Enter name" maxlength="20" style="padding: 10px; font-size: 18px; border-radius: 5px; border: none; width: 200px;">
+                <button id="submit-score-btn" onclick="submitScore()" style="padding: 10px 20px;">Submit Score</button>
+            </div>
+            <button onclick="resetRun()" style="margin-top: 20px; background: #555; box-shadow: 0 4px #333;">Back to Menu</button>
+        </div>
     </div>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>

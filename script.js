@@ -1,3 +1,42 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    query, 
+    orderBy, 
+    limit, 
+    getDocs, 
+    serverTimestamp,
+    doc,
+    getDocFromServer
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import firebaseConfig from './firebase-applet-config.json' with { type: 'json' };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+// Test connection
+async function testConnection() {
+    try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+    } catch (error) {
+        if(error instanceof Error && error.message.includes('the client is offline')) {
+            console.warn("Firestore is operating in offline mode.");
+        }
+    }
+}
+testConnection();
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -7,7 +46,7 @@ canvas.height = 400;
 // --- 1. SETTINGS & VARIABLES ---
 const gravity = 2200;    
 const friction = 0.001;  
-const jumpForce = -750;  
+const jumpForce = -750; 
 const moveSpeed = 450;   
 const acceleration = 2500; 
 const coyoteTime = 0.15; // Seconds of coyote time
@@ -124,6 +163,8 @@ function startGame() {
     gameState = 'PLAYING';
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'none';
+    document.getElementById('leaderboard-screen').style.display = 'none';
+    document.getElementById('win-screen').style.display = 'none';
     document.getElementById('ui').style.display = 'block';
     startTime = Date.now();
     timerRunning = true;
@@ -137,12 +178,16 @@ function resetRun() {
     timerFinished = false;
     elapsedTime = 0;
     document.getElementById('title-screen').style.display = 'flex';
+    document.getElementById('controls-screen').style.display = 'none';
+    document.getElementById('leaderboard-screen').style.display = 'none';
+    document.getElementById('win-screen').style.display = 'none';
     document.getElementById('ui').style.display = 'none';
 }
 
 function showControls() {
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'flex';
+    document.getElementById('leaderboard-screen').style.display = 'none';
     // Update button labels
     for (let action in controls) {
         document.getElementById(`key-${action}`).innerText = controls[action];
@@ -152,6 +197,85 @@ function showControls() {
 function showTitle() {
     document.getElementById('title-screen').style.display = 'flex';
     document.getElementById('controls-screen').style.display = 'none';
+    document.getElementById('leaderboard-screen').style.display = 'none';
+}
+
+async function showLeaderboard() {
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('leaderboard-screen').style.display = 'flex';
+    const list = document.getElementById('highscore-list');
+    list.innerHTML = '<p>Loading...</p>';
+
+    try {
+        const q = query(collection(db, "highscores"), orderBy("time", "asc"), limit(10));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            list.innerHTML = '<p>No scores yet! Be the first!</p>';
+            return;
+        }
+
+        list.innerHTML = '';
+        let rank = 1;
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const row = document.createElement('div');
+            row.innerHTML = `
+                <span>${rank}. ${data.userName}</span>
+                <span>${formatTime(data.time)}</span>
+            `;
+            list.appendChild(row);
+            rank++;
+        });
+    } catch (e) {
+        console.error("Error loading scores:", e);
+        list.innerHTML = '<p>Error loading scores.</p>';
+    }
+}
+
+async function submitScore() {
+    const nameInput = document.getElementById('player-name-input');
+    const name = nameInput.value.trim();
+    const btn = document.getElementById('submit-score-btn');
+
+    if (!name) {
+        alert("Please enter your name!");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Signing in...";
+
+    try {
+        // If not signed in, prompt Google Login
+        if (!auth.currentUser) {
+            await signInWithPopup(auth, provider);
+        }
+
+        btn.innerText = "Submitting...";
+
+        await addDoc(collection(db, "highscores"), {
+            userId: auth.currentUser.uid,
+            userName: name,
+            time: elapsedTime,
+            createdAt: serverTimestamp()
+        });
+        alert("Score submitted!");
+        resetRun();
+    } catch (e) {
+        console.error("Error submitting score:", e);
+        
+        let msg = "Error submitting score.";
+        if (e.code === 'auth/popup-blocked') {
+            msg = "Login popup blocked. Please allow popups and try again.";
+        } else if (e.code === 'permission-denied') {
+            msg = "Permission denied. Check Firestore rules.";
+        }
+        
+        alert(msg);
+        btn.disabled = false;
+        btn.innerText = "Submit Score";
+    }
 }
 
 // --- PORTAL LOGIC ---
@@ -191,7 +315,13 @@ function nextLevel() {
     } else {
         timerRunning = false;
         timerFinished = true;
-        alert(`🎉 YOU WIN!\nFinal Time: ${formatTime(elapsedTime)}`);
+        gameState = 'WIN';
+        document.getElementById('ui').style.display = 'none';
+        document.getElementById('win-screen').style.display = 'flex';
+        document.getElementById('final-time-text').innerText = `Final Time: ${formatTime(elapsedTime)}`;
+        document.getElementById('player-name-input').value = '';
+        document.getElementById('submit-score-btn').disabled = false;
+        document.getElementById('submit-score-btn').innerText = "Submit Score";
     }
 }
 
@@ -210,6 +340,9 @@ window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     if (e.key === '\\') {
         window.location.href = 'editor.html';
+    }
+    if (e.key === 'Escape') {
+        resetRun();
     }
     if (e.code === controls.reset && gameState === 'PLAYING') {
         respawn();
@@ -367,6 +500,15 @@ function draw() {
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
 }
+
+// Expose functions for inline HTML event handlers (since script is now type="module")
+window.startGame = startGame;
+window.resetRun = resetRun;
+window.showControls = showControls;
+window.showTitle = showTitle;
+window.showLeaderboard = showLeaderboard;
+window.submitScore = submitScore;
+window.remapKey = remapKey;
 
 // START THE GAME
 requestAnimationFrame(update);
