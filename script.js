@@ -207,7 +207,8 @@ async function showLeaderboard() {
     list.innerHTML = '<p>Loading...</p>';
 
     try {
-        const q = query(collection(db, "highscores"), orderBy("time", "asc"), limit(10));
+        // Fetch a larger batch to account for duplicates
+        const q = query(collection(db, "highscores"), orderBy("time", "asc"), limit(50));
         const querySnapshot = await getDocs(q);
         
         if (querySnapshot.empty) {
@@ -216,17 +217,32 @@ async function showLeaderboard() {
         }
 
         list.innerHTML = '';
-        let rank = 1;
+        const uniqueNames = new Set();
+        let displayCount = 0;
+
         querySnapshot.forEach((doc) => {
+            if (displayCount >= 5) return;
+
             const data = doc.data();
-            const row = document.createElement('div');
-            row.innerHTML = `
-                <span>${rank}. ${data.userName}</span>
-                <span>${formatTime(data.time)}</span>
-            `;
-            list.appendChild(row);
-            rank++;
+            const normalizedName = data.userName.trim().toLowerCase();
+
+            // Only add if we haven't seen this name (case-insensitive) in this leaderboard view
+            if (!uniqueNames.has(normalizedName)) {
+                uniqueNames.add(normalizedName);
+                displayCount++;
+
+                const row = document.createElement('div');
+                row.innerHTML = `
+                    <span>${displayCount}. ${data.userName}</span>
+                    <span>${formatTime(data.time)}</span>
+                `;
+                list.appendChild(row);
+            }
         });
+
+        if (displayCount === 0) {
+            list.innerHTML = '<p>No scores yet! Be the first!</p>';
+        }
     } catch (e) {
         console.error("Error loading scores:", e);
         list.innerHTML = '<p>Error loading scores.</p>';
