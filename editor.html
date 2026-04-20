@@ -102,6 +102,58 @@
         const jumpForce = -750;
         const moveSpeed = 450;
 
+        function getRotatedOverlap(p, obj) {
+            const angle = (obj.currentAngle || 0) * (Math.PI / 180);
+            const cx = obj.currentX + obj.width / 2;
+            const cy = obj.currentY + obj.height / 2;
+            const pCorners = [
+                { x: p.x, y: p.y }, { x: p.x + p.width, y: p.y },
+                { x: p.x, y: p.y + p.height }, { x: p.x + p.width, y: p.y + p.height }
+            ];
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const hw = obj.width / 2;
+            const hh = obj.height / 2;
+            const oCorners = [
+                { x: cx + (-hw) * cos - (-hh) * sin, y: cy + (-hw) * sin + (-hh) * cos },
+                { x: cx + (hw) * cos - (-hh) * sin, y: cy + (hw) * sin + (-hh) * cos },
+                { x: cx + (hw) * cos - (hh) * sin, y: cy + (hw) * sin + (hh) * cos },
+                { x: cx + (-hw) * cos - (hh) * sin, y: cy + (-hw) * sin + (hh) * cos }
+            ];
+            const axes = [
+                { x: 1, y: 0 }, { x: 0, y: 1 },
+                { x: cos, y: sin }, { x: -sin, y: cos }
+            ];
+            let minOverlap = Infinity;
+            let overlapAxis = { x: 0, y: 0 };
+            for (const axis of axes) {
+                let minP = Infinity, maxP = -Infinity;
+                for (const pt of pCorners) {
+                    const proj = pt.x * axis.x + pt.y * axis.y;
+                    minP = Math.min(minP, proj);
+                    maxP = Math.max(maxP, proj);
+                }
+                let minO = Infinity, maxO = -Infinity;
+                for (const pt of oCorners) {
+                    const proj = pt.x * axis.x + pt.y * axis.y;
+                    minO = Math.min(minO, proj);
+                    maxO = Math.max(maxO, proj);
+                }
+                const overlap = Math.min(maxP, maxO) - Math.max(minP, minO);
+                if (overlap < 0) return null;
+                if (overlap < minOverlap) {
+                    minOverlap = overlap;
+                    overlapAxis = axis;
+                }
+            }
+            const centerDist = { x: (p.x + p.width / 2) - cx, y: (p.y + p.height / 2) - cy };
+            if (centerDist.x * overlapAxis.x + centerDist.y * overlapAxis.y < 0) {
+                overlapAxis.x = -overlapAxis.x;
+                overlapAxis.y = -overlapAxis.y;
+            }
+            return { x: overlapAxis.x * minOverlap, y: overlapAxis.y * minOverlap };
+        }
+
         function setMode(m) {
             if (isTestMode) return;
             currentMode = m;
@@ -327,53 +379,76 @@
 
                 testPlayer.vy += gravity * dt;
                 
-                // Move Y
+                // Move Y (Combined with X resolution for rotated)
                 testPlayer.y += testPlayer.vy * dt;
-                objects.forEach(o => {
-                    const progress = o.isMoving ? (Math.sin(gameTime * (o.moveSpeed || 1)) + 1) / 2 : 0;
-                    const curX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
-                    const curY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
-
-                    // IMPORTANT: If rotating, use base x,y (visual only)
-                    const physX = o.isSpinning ? o.x : curX;
-                    const physY = o.isSpinning ? o.y : curY;
-
-                    if (o.type === 'PLATFORM' && 
-                        testPlayer.x < physX + o.width && testPlayer.x + testPlayer.width > physX &&
-                        testPlayer.y < physY + o.height && testPlayer.y + testPlayer.height > physY) {
-                        
-                        if (testPlayer.vy > 0) {
-                            testPlayer.y = physY - testPlayer.height;
-                            testPlayer.vy = 0;
-                            testPlayer.jumping = false;
-                        } else {
-                            testPlayer.y = physY + o.height;
-                            testPlayer.vy = 0;
-                        }
-                    }
-                });
-
-                // Move X
                 testPlayer.x += testPlayer.vx * dt;
+
                 objects.forEach(o => {
                     const progress = o.isMoving ? (Math.sin(gameTime * (o.moveSpeed || 1)) + 1) / 2 : 0;
-                    const curX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
-                    const curY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
+                    o.currentX = o.isMoving ? o.x + (o.tx - o.x) * progress : o.x;
+                    o.currentY = o.isMoving ? o.y + (o.ty - o.y) * progress : o.y;
+                    o.currentAngle = (o.angle || 0) + (o.isSpinning ? (o.spinSpeed || 0) * time : 0);
 
-                    const physX = o.isSpinning ? o.x : curX;
-                    const physY = o.isSpinning ? o.y : curY;
-
-                    if (testPlayer.x < physX + o.width && testPlayer.x + testPlayer.width > physX &&
-                        testPlayer.y < physY + o.height && testPlayer.y + testPlayer.height > physY) {
-                        
-                        if (o.type === 'PLATFORM') {
-                            if (testPlayer.vx > 0) testPlayer.x = physX - testPlayer.width;
-                            else if (testPlayer.vx < 0) testPlayer.x = physX + o.width;
-                        } else if (o.type === 'SPIKE') {
-                            toggleTestMode(); toggleTestMode(); // Quick reset
-                        } else if (o.type === 'GOAL') {
-                            alert("Level Complete!");
-                            toggleTestMode();
+                    if ((o.currentAngle || 0) % 360 !== 0) {
+                        const overlap = getRotatedOverlap(testPlayer, o);
+                        if (overlap) {
+                            if (o.type === 'PLATFORM') {
+                                if (o.isSpinning) {
+                                    const cx = o.currentX + o.width / 2;
+                                    const cy = o.currentY + o.height / 2;
+                                    const rx = (testPlayer.x + testPlayer.width / 2) - cx;
+                                    const ry = (testPlayer.y + testPlayer.height / 2) - cy;
+                                    const deltaAngle = (o.spinSpeed || 0) * dt * (Math.PI / 180);
+                                    testPlayer.x += (rx * Math.cos(deltaAngle) - ry * Math.sin(deltaAngle)) - rx;
+                                    testPlayer.y += (rx * Math.sin(deltaAngle) + ry * Math.cos(deltaAngle)) - ry;
+                                }
+                                const finalOverlap = getRotatedOverlap(testPlayer, o);
+                                if (finalOverlap) {
+                                    testPlayer.x += finalOverlap.x;
+                                    testPlayer.y += finalOverlap.y;
+                                    if (Math.abs(finalOverlap.y) > Math.abs(finalOverlap.x)) {
+                                        if (finalOverlap.y < 0) {
+                                            testPlayer.jumping = false;
+                                            testPlayer.vy = 0;
+                                        } else {
+                                            testPlayer.vy = 0;
+                                        }
+                                    } else {
+                                        testPlayer.vx = 0;
+                                    }
+                                }
+                            } else if (o.type === 'SPIKE') {
+                                toggleTestMode(); toggleTestMode();
+                            } else if (o.type === 'GOAL') {
+                                alert("Level Complete!"); toggleTestMode();
+                            }
+                        }
+                    } else {
+                        const physX = o.currentX;
+                        const physY = o.currentY;
+                        if (testPlayer.x < physX + o.width && testPlayer.x + testPlayer.width > physX &&
+                            testPlayer.y < physY + o.height && testPlayer.y + testPlayer.height > physY) {
+                            if (o.type === 'PLATFORM') {
+                                // Simplified push-out for editor test mode
+                                const overlapY = testPlayer.vy > 0 ? (physY - (testPlayer.y + testPlayer.height)) : ((physY + o.height) - testPlayer.y);
+                                const overlapX = testPlayer.vx > 0 ? (physX - (testPlayer.x + testPlayer.width)) : ((physX + o.width) - testPlayer.x);
+                                
+                                if (Math.abs(overlapY) < Math.abs(overlapX)) {
+                                    testPlayer.y += overlapY;
+                                    if (testPlayer.vy > 0) {
+                                        testPlayer.vy = 0;
+                                        testPlayer.jumping = false;
+                                    } else testPlayer.vy = 0;
+                                } else {
+                                    testPlayer.x += overlapX;
+                                    testPlayer.vx = 0;
+                                }
+                            } else if (o.type === 'SPIKE') {
+                                toggleTestMode(); toggleTestMode(); 
+                            } else if (o.type === 'GOAL') {
+                                alert("Level Complete!");
+                                toggleTestMode();
+                            }
                         }
                     }
                 });

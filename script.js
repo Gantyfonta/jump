@@ -95,6 +95,68 @@ function formatTime(ms) {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 }
 
+// --- HELPER FOR ROTATED COLLISION ---
+function getRotatedOverlap(p, obj) {
+    const angle = (obj.currentAngle || 0) * (Math.PI / 180);
+    const cx = obj.currentX + obj.width / 2;
+    const cy = obj.currentY + obj.height / 2;
+
+    const pCorners = [
+        { x: p.x, y: p.y },
+        { x: p.x + p.width, y: p.y },
+        { x: p.x, y: p.y + p.height },
+        { x: p.x + p.width, y: p.y + p.height }
+    ];
+
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const hw = obj.width / 2;
+    const hh = obj.height / 2;
+
+    const oCorners = [
+        { x: cx + (-hw) * cos - (-hh) * sin, y: cy + (-hw) * sin + (-hh) * cos },
+        { x: cx + (hw) * cos - (-hh) * sin, y: cy + (hw) * sin + (-hh) * cos },
+        { x: cx + (hw) * cos - (hh) * sin, y: cy + (hw) * sin + (hh) * cos },
+        { x: cx + (-hw) * cos - (hh) * sin, y: cy + (-hw) * sin + (hh) * cos }
+    ];
+
+    const axes = [
+        { x: 1, y: 0 }, { x: 0, y: 1 },
+        { x: cos, y: sin }, { x: -sin, y: cos }
+    ];
+
+    let minOverlap = Infinity;
+    let overlapAxis = { x: 0, y: 0 };
+
+    for (const axis of axes) {
+        let minP = Infinity, maxP = -Infinity;
+        for (const pt of pCorners) {
+            const proj = pt.x * axis.x + pt.y * axis.y;
+            minP = Math.min(minP, proj);
+            maxP = Math.max(maxP, proj);
+        }
+        let minO = Infinity, maxO = -Infinity;
+        for (const pt of oCorners) {
+            const proj = pt.x * axis.x + pt.y * axis.y;
+            minO = Math.min(minO, proj);
+            maxO = Math.max(maxO, proj);
+        }
+        const overlap = Math.min(maxP, maxO) - Math.max(minP, minO);
+        if (overlap < 0) return null;
+        if (overlap < minOverlap) {
+            minOverlap = overlap;
+            overlapAxis = axis;
+        }
+    }
+
+    const centerDist = { x: (p.x + p.width / 2) - cx, y: (p.y + p.height / 2) - cy };
+    if (centerDist.x * overlapAxis.x + centerDist.y * overlapAxis.y < 0) {
+        overlapAxis.x = -overlapAxis.x;
+        overlapAxis.y = -overlapAxis.y;
+    }
+    return { x: overlapAxis.x * minOverlap, y: overlapAxis.y * minOverlap };
+}
+
 // 2. PLAYER DEFINITION
 const player = {
     x: 50,
@@ -576,32 +638,66 @@ function update(timestamp) {
     player.y += player.velY * dt; 
     
     worldObjects.forEach(obj => {
-        // If it's spinning, it's visual only - use static x,y for collision
-        const physX = obj.isSpinning ? obj.x : obj.currentX;
-        const physY = obj.isSpinning ? obj.y : obj.currentY;
-
-        if (player.x < physX + obj.width && player.x + player.width > physX &&
-            player.y < physY + obj.height && player.y + player.height > physY) {
-            
-            if (obj.type === 'PLATFORM') {
-                if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= physY + 10) { 
-                    player.jumping = false;
-                    player.coyoteCounter = coyoteTime; // Reset coyote time
-                    player.velY = 0;
-                    player.y = physY - player.height;
-                    // Only add momentum if not visually spinning (static collision)
-                    if (obj.isMoving && !obj.isSpinning) player.y += (obj.currentY - obj.oldY);
-                } 
-                else if (player.velY < 0 && player.y - (player.velY * dt) >= physY + obj.height - 10) {
-                    player.velY = 0;
-                    player.y = physY + obj.height;
+        if ((obj.currentAngle || 0) % 360 !== 0) {
+            const overlap = getRotatedOverlap(player, obj);
+            if (overlap) {
+                if (obj.type === 'PLATFORM') {
+                    if (obj.isSpinning) {
+                        const cx = obj.currentX + obj.width / 2;
+                        const cy = obj.currentY + obj.height / 2;
+                        const rx = (player.x + player.width / 2) - cx;
+                        const ry = (player.y + player.height / 2) - cy;
+                        const deltaAngle = (obj.spinSpeed || 0) * dt * (Math.PI / 180);
+                        player.x += (rx * Math.cos(deltaAngle) - ry * Math.sin(deltaAngle)) - rx;
+                        player.y += (rx * Math.sin(deltaAngle) + ry * Math.cos(deltaAngle)) - ry;
+                    }
+                    const finalOverlap = getRotatedOverlap(player, obj);
+                    if (finalOverlap) {
+                        player.x += finalOverlap.x;
+                        player.y += finalOverlap.y;
+                        if (Math.abs(finalOverlap.y) > Math.abs(finalOverlap.x)) {
+                            if (finalOverlap.y < 0) {
+                                player.jumping = false;
+                                player.coyoteCounter = coyoteTime;
+                                player.velY = 0;
+                            } else {
+                                player.velY = 0;
+                            }
+                        } else {
+                            player.velX = 0;
+                        }
+                    }
                 }
-            } 
-            else if (obj.type === 'SPIKE') respawn();
-            else if (obj.type === 'GOAL') nextLevel();
-            else if (obj.type === 'PORTAL_SHRINK') setPlayerSize(15);
-            else if (obj.type === 'PORTAL_NORMAL') setPlayerSize(30);
-            else if (obj.type === 'PORTAL_GROW') setPlayerSize(45);
+                else if (obj.type === 'SPIKE') respawn();
+                else if (obj.type === 'GOAL') nextLevel();
+                else if (obj.type === 'PORTAL_SHRINK') setPlayerSize(15);
+                else if (obj.type === 'PORTAL_NORMAL') setPlayerSize(30);
+                else if (obj.type === 'PORTAL_GROW') setPlayerSize(45);
+            }
+        } else {
+            const physX = obj.currentX;
+            const physY = obj.currentY;
+            if (player.x < physX + obj.width && player.x + player.width > physX &&
+                player.y < physY + obj.height && player.y + player.height > physY) {
+                if (obj.type === 'PLATFORM') {
+                    if (player.velY >= 0 && (player.y + player.height) - (player.velY * dt) <= physY + 10) { 
+                        player.jumping = false;
+                        player.coyoteCounter = coyoteTime;
+                        player.velY = 0;
+                        player.y = physY - player.height;
+                        if (obj.isMoving) player.y += (obj.currentY - obj.oldY);
+                    } 
+                    else if (player.velY < 0 && player.y - (player.velY * dt) >= physY + obj.height - 10) {
+                        player.velY = 0;
+                        player.y = physY + obj.height;
+                    }
+                } 
+                else if (obj.type === 'SPIKE') respawn();
+                else if (obj.type === 'GOAL') nextLevel();
+                else if (obj.type === 'PORTAL_SHRINK') setPlayerSize(15);
+                else if (obj.type === 'PORTAL_NORMAL') setPlayerSize(30);
+                else if (obj.type === 'PORTAL_GROW') setPlayerSize(45);
+            }
         }
     });
 
@@ -609,25 +705,24 @@ function update(timestamp) {
     player.x += player.velX * dt;
     
     worldObjects.forEach(obj => {
-        const physX = obj.isSpinning ? obj.x : obj.currentX;
-        const physY = obj.isSpinning ? obj.y : obj.currentY;
-
-        if (obj.isMoving && !obj.isSpinning && !player.jumping && 
-            player.x < physX + obj.width && player.x + player.width > physX &&
-            player.y + player.height >= physY - 5 && player.y + player.height <= physY + 10) {
-            player.x += (obj.currentX - obj.oldX);
-        }
-
-        if (player.x < physX + obj.width && player.x + player.width > physX &&
-            player.y < physY + obj.height && player.y + player.height > physY) {
-            
-            if (obj.type === 'PLATFORM') {
-                if (player.y + player.height > physY + 5) {
-                    if (player.velX > 0) { player.x = physX - player.width; player.velX = 0; }
-                    else if (player.velX < 0) { player.x = physX + obj.width; player.velX = 0; }
-                }
-            } else if (obj.type === 'SPIKE') respawn();
-            else if (obj.type === 'GOAL') nextLevel();
+        if ((obj.currentAngle || 0) % 360 === 0) {
+            const physX = obj.currentX;
+            const physY = obj.currentY;
+            if (obj.isMoving && !player.jumping && 
+                player.x < physX + obj.width && player.x + player.width > physX &&
+                player.y + player.height >= physY - 5 && player.y + player.height <= physY + 10) {
+                player.x += (obj.currentX - obj.oldX);
+            }
+            if (player.x < physX + obj.width && player.x + player.width > physX &&
+                player.y < physY + obj.height && player.y + player.height > physY) {
+                if (obj.type === 'PLATFORM') {
+                    if (player.y + player.height > physY + 5) {
+                        if (player.velX > 0) { player.x = physX - player.width; player.velX = 0; }
+                        else if (player.velX < 0) { player.x = physX + obj.width; player.velX = 0; }
+                    }
+                } else if (obj.type === 'SPIKE') respawn();
+                else if (obj.type === 'GOAL') nextLevel();
+            }
         }
     });
 
