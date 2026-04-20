@@ -372,7 +372,6 @@
         };
 
         function render(timestamp) {
-            ctx.save();
             ctx.fillStyle = "#111"; // Dark background
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
@@ -386,17 +385,19 @@
                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
             }
             
-            if (!lastTime) lastTime = timestamp;
-            let dt = timestamp ? (timestamp - lastTime) / 1000 : 0;
-            if (dt > 0.1) dt = 0.1;
-            lastTime = timestamp;
+            let dt = 0;
+            if (timestamp !== undefined) {
+                if (!lastTime) lastTime = timestamp;
+                dt = (timestamp - lastTime) / 1000;
+                if (dt > 0.1) dt = 0.1;
+                lastTime = timestamp;
+                gameTime += dt * 2;
+            }
 
             const time = timestamp ? timestamp / 1000 : 0;
-            gameTime += dt * 2;
            
             // --- PHYSICS UPDATE (ONLY IN TEST MODE) ---
-            if (isTestMode) {
-                // ... (physics code remains the same as before) ...
+            if (isTestMode && timestamp !== undefined) {
                 // Horizontal
                 if (keys['ArrowLeft'] || keys['KeyA']) testPlayer.vx = -moveSpeed;
                 else if (keys['ArrowRight'] || keys['KeyD']) testPlayer.vx = moveSpeed;
@@ -443,9 +444,10 @@
                                     }
                                 }
                             } else if (o.type === 'SPIKE') {
-                                toggleTestMode(); toggleTestMode();
+                                toggleTestMode(); toggleTestMode(); 
                             } else if (o.type === 'GOAL') {
-                                alert("Level Complete!"); toggleTestMode();
+                                alert("Level Complete!");
+                                toggleTestMode();
                             }
                         }
                     } else {
@@ -532,7 +534,7 @@
                 ctx.shadowBlur = 0;
             }
 
-            if (isTestMode || objects.some(o => o.isSpinning || o.isMoving)) {
+            if (isTestMode || objects.some(o => o.isSpinning || o.isMoving) || isDrawing) {
                 requestAnimationFrame(render);
             }
 
