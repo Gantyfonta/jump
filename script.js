@@ -153,7 +153,7 @@ function setShake(amount, duration) {
     shakeTime = duration;
 }
 
-const lastTime = 0; 
+let lastTime = 0; 
 let gameTime = 0; 
 const keys = {}; 
 const touchKeys = { left: false, right: false, jump: false };
