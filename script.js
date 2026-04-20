@@ -231,6 +231,50 @@ function showTitle() {
 function showAdminPanel() {
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'flex';
+    loadAdminScores();
+}
+
+async function loadAdminScores() {
+    const list = document.getElementById('admin-highscore-list');
+    list.innerHTML = '<p>Loading scores...</p>';
+    try {
+        const q = query(collection(db, "highscores"), orderBy("time", "asc"), limit(50));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            list.innerHTML = '<p>No scores found.</p>';
+            return;
+        }
+        list.innerHTML = '';
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.padding = '5px';
+            row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            row.innerHTML = `
+                <span>${data.userName} - ${formatTime(data.time)}</span>
+                <button onclick="deleteScore('${docSnap.id}')" style="padding: 2px 8px; font-size: 10px; background: #ff4757; box-shadow: 0 2px #c0392b;">Delete</button>
+            `;
+            list.appendChild(row);
+        });
+    } catch (e) {
+        console.error(e);
+        list.innerHTML = '<p>Error loading scores.</p>';
+    }
+}
+
+async function deleteScore(docId) {
+    if (!confirm("Are you sure you want to delete this score?")) return;
+    try {
+        await deleteDoc(doc(db, "highscores", docId));
+        alert("Score deleted.");
+        loadAdminScores(); // Refresh list
+    } catch (e) {
+        console.error(e);
+        alert("Failed to delete score. Permission denied?");
+    }
 }
 
 async function postAnnouncement() {
@@ -604,6 +648,8 @@ window.showAdminPanel = showAdminPanel;
 window.postAnnouncement = postAnnouncement;
 window.clearAnnouncement = clearAnnouncement;
 window.adminLogin = adminLogin;
+window.loadAdminScores = loadAdminScores;
+window.deleteScore = deleteScore;
 
 // START THE GAME
 requestAnimationFrame(update);
