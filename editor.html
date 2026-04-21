@@ -46,6 +46,7 @@
        
         <button id="drawBtn" class="action-btn mode-toggle mode-active" onclick="setMode('DRAW')">Draw</button>
         <button id="moveBtn" class="action-btn mode-toggle" onclick="setMode('MOVE')">Move</button>
+        <button id="resizeBtn" class="action-btn mode-toggle" onclick="setMode('RESIZE')">Resize</button>
         <button id="rotateBtn" class="action-btn mode-toggle" onclick="setMode('ROTATE')">Rotate</button>
         <button id="deleteBtn" class="action-btn mode-toggle" onclick="setMode('DELETE')">Delete</button>
         <button id="trajectoryBtn" class="action-btn mode-toggle" onclick="setMode('TRAJECTORY')">Trajectory</button>
@@ -74,7 +75,7 @@
     <textarea id="output" placeholder="Paste code here and click 'Import Code' to edit..."></textarea>
 
     <div class="help">
-        <b>Controls:</b> Drag to Draw | Right Click to Delete | Ctrl+Z to Undo | <b>\ to Play</b> <br>
+        <b>Controls:</b> Drag to Draw | <b>Resize Mode:</b> Drag bottom-right corner | Right Click to Delete | Ctrl+Z to Undo | <b>\ to Play</b> <br>
         To make a platform move: Click 'Mode: Draw' to switch to 'Set Trajectory', then drag from an object to its destination.
     </div>
 
@@ -284,6 +285,12 @@
                     if (currentMode === 'MOVE') {
                         offsetX = mx - selectedObj.x;
                         offsetY = my - selectedObj.y;
+                    } else if (currentMode === 'RESIZE') {
+                        // Check which corner is being dragged or just default to bottom-right
+                        // For simplicity, we'll anchor the top-left and move the bottom-right
+                        // unless we want to be fancy. Let's do simple first.
+                        offsetX = selectedObj.width;
+                        offsetY = selectedObj.height;
                     } else if (currentMode === 'DELETE') {
                         objects = objects.filter(o => o !== selectedObj);
                         selectedObj = null;
@@ -313,6 +320,9 @@
                 if (currentMode === 'MOVE') {
                     selectedObj.x = curX - offsetX;
                     selectedObj.y = curY - offsetY;
+                } else if (currentMode === 'RESIZE') {
+                    selectedObj.width = Math.max(10, curX - selectedObj.x);
+                    selectedObj.height = Math.max(10, curY - selectedObj.y);
                 } else if (currentMode === 'ROTATE') {
                     const centerX = selectedObj.x + selectedObj.width / 2;
                     const centerY = selectedObj.y + selectedObj.height / 2;
@@ -485,6 +495,15 @@
                     ctx.stroke();
                     ctx.strokeRect(o.tx, o.ty, o.width, o.height);
                     ctx.setLineDash([]);
+                }
+
+                // Resize handles
+                if (currentMode === 'RESIZE' && o === selectedObj) {
+                    ctx.strokeStyle = '#2ecc71';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(o.x, o.y, o.width, o.height);
+                    ctx.fillStyle = '#2ecc71';
+                    ctx.fillRect(o.x + o.width - 5, o.y + o.height - 5, 10, 10);
                 }
             });
 
