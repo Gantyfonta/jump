@@ -377,15 +377,15 @@ const LEVEL_DATABASE = [
     {"x":19.5,"y":25.1875,"width":41,"height":47,"type":"GOAL","currentX":19.5,"currentY":25.1875,"currentAngle":0}
 ],
 
-[
-    {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},
-    {"x":179,"y":311,"width":30,"height":30,"type":"LEVER","channel":1},
-    {"x":492,"y":162,"width":30,"height":30,"type":"BUTTON","channel":2},
-    {"x":150,"y":340,"width":100,"height":20,"type":"PLATFORM","tx":150,"ty":200,"isMoving":true,"channel":1},
-    {"x":450,"y":200,"width":100,"height":20,"type":"PLATFORM","tx":650,"ty":100,"isMoving":true,"channel":2},
-    {"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},{"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"}]
-
-    
+[{"x":0,"y":385,"width":800,"height":20,"type":"PLATFORM"},
+{"x":179,"y":311,"width":30,"height":30,"type":"LEVER","channel":1},
+{"x":492,"y":162,"width":30,"height":30,"type":"BUTTON","channel":2},
+{"x":150,"y":340,"width":100,"height":20,"type":"PLATFORM","tx":150,"ty":200,"isMoving":true,"channel":1},
+{"x":450,"y":200,"width":100,"height":20,"type":"PLATFORM","tx":650,"ty":100,"isMoving":true,"channel":2},
+{"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},
+{"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"},
+{"x":24.5,"y":348.1875,"width":22,"height":18,"type":"SPAWN"}
+]
 ];
 
 let currentLevelIndex = 0;
