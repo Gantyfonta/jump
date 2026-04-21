@@ -3,7 +3,8 @@ import {
     getAuth, 
     signInWithPopup, 
     GoogleAuthProvider, 
-    onAuthStateChanged 
+    onAuthStateChanged,
+    signInAnonymously 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { 
     getFirestore, 
@@ -293,6 +294,8 @@ const LEVEL_DATABASE = [
 [
     {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},{"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},{"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},{"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},{"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},{"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
 ]
+
+    
 ];
 
 let currentLevelIndex = 0;
@@ -625,15 +628,13 @@ async function submitScore() {
     }
 
     btn.disabled = true;
-    btn.innerText = "Signing in...";
+    btn.innerText = "Submitting...";
 
     try {
-        // If not signed in, prompt Google Login
+        // Sign in anonymously if not already signed in
         if (!auth.currentUser) {
-            await signInWithPopup(auth, provider);
+            await signInAnonymously(auth);
         }
-
-        btn.innerText = "Submitting...";
 
         await addDoc(collection(db, "highscores"), {
             userId: auth.currentUser.uid,
@@ -647,9 +648,7 @@ async function submitScore() {
         console.error("Error submitting score:", e);
         
         let msg = "Error submitting score.";
-        if (e.code === 'auth/popup-blocked') {
-            msg = "Login popup blocked. Please allow popups and try again.";
-        } else if (e.code === 'permission-denied') {
+        if (e.code === 'permission-denied') {
             msg = "Permission denied. Check Firestore rules.";
         }
         
@@ -672,15 +671,37 @@ function setPlayerSize(newSize) {
 }
 
 // --- NPC & DIALOGUE ---
+let typewriterHandle = null;
+
 function openDialogue(text) {
     if (!text) return;
     dialogueActive = true;
-    document.getElementById('dialogue-text').innerText = text;
+    const diagElement = document.getElementById('dialogue-text');
+    diagElement.innerText = '';
     document.getElementById('dialogue-box').style.display = 'flex';
     sfx.click();
+
+    // Typewriter effect
+    if (typewriterHandle) clearInterval(typewriterHandle);
+    let i = 0;
+    typewriterHandle = setInterval(() => {
+        if (i < text.length) {
+            diagElement.innerText += text.charAt(i);
+            i++;
+            // Play a tiny click sound for each character (optional, but subtle is better)
+            // sfx.play(1000 + Math.random() * 500, 0.02, 'sine', 0.02, false);
+        } else {
+            clearInterval(typewriterHandle);
+            typewriterHandle = null;
+        }
+    }, 40);
 }
 
 function closeDialogue() {
+    if (typewriterHandle) {
+        clearInterval(typewriterHandle);
+        typewriterHandle = null;
+    }
     dialogueActive = false;
     document.getElementById('dialogue-box').style.display = 'none';
     sfx.click();
