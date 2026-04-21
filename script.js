@@ -165,6 +165,8 @@ let timerRunning = false;
 let timerFinished = false;
 let dialogueActive = false;
 let currentNpc = null;
+let isCustomMode = false;
+let customLevelData = null;
 
 function formatTime(ms) {
     let minutes = Math.floor(ms / 60000);
@@ -290,7 +292,7 @@ const LEVEL_DATABASE = [
 
 [
     {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},{"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},{"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},{"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},{"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},{"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
-]  
+]
 ];
 
 let currentLevelIndex = 0;
@@ -369,10 +371,19 @@ function startGame() {
     document.getElementById('dialogue-box').style.display = 'none';
     document.getElementById('interaction-prompt').style.display = 'none';
     document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('play-select-screen').style.display = 'none';
+    document.getElementById('custom-level-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'none';
     document.getElementById('leaderboard-screen').style.display = 'none';
     document.getElementById('win-screen').style.display = 'none';
+    document.getElementById('player-name-input').style.display = 'inline-block';
+    document.getElementById('submit-score-btn').style.display = 'inline-block';
     document.getElementById('ui').style.display = 'block';
+    
+    // If not custom mode, ensure we are in campaign
+    if (!isCustomMode) {
+        customLevelData = null;
+    }
     
     updateSettingsUI();
     sfx.click();
@@ -388,6 +399,8 @@ function startGame() {
 
 function resetRun(backToMenu = true) {
     dialogueActive = false;
+    isCustomMode = false;
+    customLevelData = null;
     document.getElementById('dialogue-box').style.display = 'none';
     document.getElementById('interaction-prompt').style.display = 'none';
     if (backToMenu) {
@@ -397,6 +410,8 @@ function resetRun(backToMenu = true) {
         timerFinished = false;
         elapsedTime = 0;
         document.getElementById('title-screen').style.display = 'flex';
+        document.getElementById('play-select-screen').style.display = 'none';
+        document.getElementById('custom-level-screen').style.display = 'none';
         document.getElementById('controls-screen').style.display = 'none';
         document.getElementById('leaderboard-screen').style.display = 'none';
         document.getElementById('win-screen').style.display = 'none';
@@ -405,6 +420,36 @@ function resetRun(backToMenu = true) {
         // Auto-play: Reset run but keep level at 0 and start immediately
         currentLevelIndex = 0;
         startGame();
+    }
+}
+
+// --- NEW MENU FUNCTIONS ---
+function showPlayMenu() {
+    sfx.click();
+    isCustomMode = false;
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('play-select-screen').style.display = 'flex';
+}
+
+function showCustomInput() {
+    sfx.click();
+    document.getElementById('play-select-screen').style.display = 'none';
+    document.getElementById('custom-level-screen').style.display = 'flex';
+}
+
+function startCustomLevel() {
+    const input = document.getElementById('custom-level-input').value.trim();
+    try {
+        const parsed = JSON.parse(input);
+        if (Array.isArray(parsed)) {
+            customLevelData = parsed;
+            isCustomMode = true;
+            startGame();
+        } else {
+            alert("Level code must be an array of objects!");
+        }
+    } catch (e) {
+        alert("Invalid level code format. Make sure it's valid JSON.");
     }
 }
 
@@ -420,7 +465,10 @@ function showControls() {
 }
 
 function showTitle() {
+    isCustomMode = false;
     document.getElementById('title-screen').style.display = 'flex';
+    document.getElementById('play-select-screen').style.display = 'none';
+    document.getElementById('custom-level-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'none';
     document.getElementById('leaderboard-screen').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'none';
@@ -640,8 +688,14 @@ function closeDialogue() {
 
 // 4. LEVEL LOGIC
 function initLevel() {
-    worldObjects = LEVEL_DATABASE[currentLevelIndex];
-    document.getElementById('level-display').innerText = currentLevelIndex + 1;
+    if (isCustomMode && customLevelData) {
+        worldObjects = JSON.parse(JSON.stringify(customLevelData)); // Deep copy to avoid mutation
+        document.getElementById('level-display').innerText = "CUSTOM";
+    } else {
+        worldObjects = LEVEL_DATABASE[currentLevelIndex];
+        document.getElementById('level-display').innerText = currentLevelIndex + 1;
+    }
+    
     const spawn = worldObjects.find(o => o.type === 'SPAWN');
     if (spawn) {
         spawnPoint = { x: spawn.x, y: spawn.y };
@@ -663,6 +717,19 @@ function respawn() {
 }
 
 function nextLevel() {
+    if (isCustomMode) {
+        sfx.win();
+        timerRunning = false;
+        timerFinished = true;
+        gameState = 'WIN';
+        document.getElementById('ui').style.display = 'none';
+        document.getElementById('win-screen').style.display = 'flex';
+        document.getElementById('final-time-text').innerText = `Custom Level Time: ${formatTime(elapsedTime)}`;
+        document.getElementById('player-name-input').style.display = 'none';
+        document.getElementById('submit-score-btn').style.display = 'none';
+        return;
+    }
+
     currentLevelIndex++;
     if (currentLevelIndex < LEVEL_DATABASE.length) {
         sfx.portal();
@@ -1070,6 +1137,9 @@ function draw() {
 
 // Expose functions for inline HTML event handlers (since script is now type="module")
 window.startGame = startGame;
+window.showPlayMenu = showPlayMenu;
+window.showCustomInput = showCustomInput;
+window.startCustomLevel = startCustomLevel;
 window.resetRun = resetRun;
 window.showControls = showControls;
 window.showTitle = showTitle;

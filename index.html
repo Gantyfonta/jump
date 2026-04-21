@@ -23,13 +23,34 @@
             <h1>UNTITLED PLATFORMER</h1>
             <p>Speedrun Edition</p>
             <div class="menu-buttons">
-                <button onclick="startGame()">Start Game</button>
+                <button onclick="showPlayMenu()">Start Game</button>
                 <button onclick="showLeaderboard()">High Scores</button>
                 <button onclick="showControls()">Controls</button>
                 <button onclick="window.location.href='editor.html'">Level Editor</button>
                 <button id="admin-panel-btn" onclick="showAdminPanel()" style="display: none; background: #3498db; box-shadow: 0 4px #2980b9;">Admin Panel</button>
             </div>
             <p id="admin-login-link" onclick="adminLogin()" style="font-size: 10px; opacity: 0.3; margin-top: 20px; cursor: pointer;">Admin Login</p>
+        </div>
+
+        <!-- Play Selection Screen -->
+        <div id="play-select-screen" class="overlay" style="display: none;">
+            <h2>SELECT MODE</h2>
+            <div class="menu-buttons">
+                <button onclick="startGame()">Campaign</button>
+                <button onclick="showCustomInput()" style="background: var(--accent-blue); border-color: var(--accent-blue); color: #000;">Custom Level</button>
+                <button onclick="showTitle()" style="background: #555; margin-top: 20px;">Back</button>
+            </div>
+        </div>
+
+        <!-- Custom Level Input Screen -->
+        <div id="custom-level-screen" class="overlay" style="display: none;">
+            <h2>CUSTOM LEVEL</h2>
+            <p style="margin-bottom: 20px;">Paste level code below:</p>
+            <textarea id="custom-level-input" placeholder='[{"x":0,"y":380,...}]' style="width: 80%; height: 150px; background: rgba(0,0,0,0.5); color: #0f0; border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px; font-family: monospace; margin-bottom: 20px;"></textarea>
+            <div class="menu-buttons" style="flex-direction: row; width: auto; gap: 10px;">
+                <button onclick="startCustomLevel()" style="background: var(--accent-green); color: #000; padding: 10px 20px;">Play Level</button>
+                <button onclick="showPlayMenu()" style="background: #555; padding: 10px 20px;">Back</button>
+            </div>
         </div>
 
         <!-- Controls Screen -->
