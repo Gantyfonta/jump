@@ -379,16 +379,11 @@ const LEVEL_DATABASE = [
 
 [
     {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},
-    {"x":50,"y":340,"width":30,"height":30,"type":"SPAWN"},
-    {"x":40,"y":355,"width":30,"height":30,"type":"LEVER", "channel": 1},
-    {"x":300,"y":100,"width":30,"height":30,"type":"BUTTON", "channel": 2},
-    // Channel 1: Moves platform to bridge the gap
-    {"x":150,"y":340,"width":100,"height":20,"type":"PLATFORM", "tx":150, "ty":200, "isMoving": true, "channel": 1},
-    // Channel 2: Moves platform to allow access to goal
-    {"x":450,"y":200,"width":100,"height":20,"type":"PLATFORM", "tx":650, "ty":100, "isMoving": true, "channel": 2},
-    {"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},
-    {"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"}
-]
+    {"x":179,"y":311,"width":30,"height":30,"type":"LEVER","channel":1},
+    {"x":492,"y":162,"width":30,"height":30,"type":"BUTTON","channel":2},
+    {"x":150,"y":340,"width":100,"height":20,"type":"PLATFORM","tx":150,"ty":200,"isMoving":true,"channel":1},
+    {"x":450,"y":200,"width":100,"height":20,"type":"PLATFORM","tx":650,"ty":100,"isMoving":true,"channel":2},
+    {"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},{"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"}]
 
     
 ];
