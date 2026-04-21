@@ -101,16 +101,9 @@
         </div>
 
         <!-- NPC Interaction UI -->
-        <div id="interaction-prompt" style="display: none; position: absolute; color: white; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px; transform: translateX(-50%); pointer-events: none; z-index: 20;">[E] TALK</div>
+        <div id="interaction-prompt">TALK</div>
         
-        <div id="dialogue-box" class="overlay" style="display: none; background: rgba(0,0,0,0.85);">
-            <div class="dialogue-container">
-                <div id="dialogue-text">Hello adventurer!</div>
-                <button onclick="closeDialogue()" style="margin-top: 20px; width: auto;">Close [E]</button>
-            </div>
-        </div>
-
-        <!-- Admin Panel -->
+        <!-- UI Components -->
         <div id="admin-panel" class="overlay" style="display: none;">
             <h2>ADMIN PANEL</h2>
             <div style="width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px;">
@@ -135,6 +128,7 @@
                 <button id="touch-right" class="touch-btn">→</button>
             </div>
             <div class="touch-group right-group">
+                <button id="touch-interact" class="touch-btn">TALK</button>
                 <button id="touch-jump" class="touch-btn">JUMP</button>
             </div>
         </div>

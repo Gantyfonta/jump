@@ -249,7 +249,13 @@
         };
 
         function saveState() {
-            history.push(JSON.stringify(objects));
+            try {
+                history.push(JSON.stringify(objects));
+            } catch (e) {
+                console.error("Failed to save history state:", e);
+                // Fallback: push a shallow copy if JSON stringify fails for some reason
+                history.push(JSON.stringify(objects.map(o => ({...o}))));
+            }
             if (history.length > 50) history.shift();
         }
 
@@ -557,7 +563,22 @@
         }
 
         function exportCode() {
-            outputField.value = JSON.stringify(objects);
+            try {
+                outputField.value = JSON.stringify(objects);
+            } catch (e) {
+                console.error("Export failed:", e);
+                alert("Export failed due to circular structure error. Attempting recovery...");
+                outputField.value = JSON.stringify(objects.map(o => {
+                    const copy = { ...o };
+                    // Remove potential circular/complex properties
+                    delete copy.currentX;
+                    delete copy.currentY;
+                    delete copy.currentAngle;
+                    delete copy.oldX;
+                    delete copy.oldY;
+                    return copy;
+                }));
+            }
         }
 
         function clearAll() {

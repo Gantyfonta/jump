@@ -316,7 +316,9 @@ let controls = {
 const savedControls = localStorage.getItem('platformer_controls');
 if (savedControls) {
     try {
-        controls = JSON.parse(savedControls);
+        const parsed = JSON.parse(savedControls);
+        // Merge saved controls with defaults to ensure new actions like 'interact' exist
+        controls = { ...controls, ...parsed };
     } catch (e) {
         console.error("Failed to parse saved controls", e);
     }
@@ -332,7 +334,11 @@ function remapKey(action) {
 }
 
 function saveControls() {
-    localStorage.setItem('platformer_controls', JSON.stringify(controls));
+    try {
+        localStorage.setItem('platformer_controls', JSON.stringify(controls));
+    } catch (e) {
+        console.error("Failed to save controls:", e);
+    }
 }
 
 // --- UI MANAGEMENT ---
@@ -371,7 +377,6 @@ function updateSettingsUI() {
 function startGame() {
     gameState = 'PLAYING';
     dialogueActive = false;
-    document.getElementById('dialogue-box').style.display = 'none';
     document.getElementById('interaction-prompt').style.display = 'none';
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('play-select-screen').style.display = 'none';
@@ -404,7 +409,6 @@ function resetRun(backToMenu = true) {
     dialogueActive = false;
     isCustomMode = false;
     customLevelData = null;
-    document.getElementById('dialogue-box').style.display = 'none';
     document.getElementById('interaction-prompt').style.display = 'none';
     if (backToMenu) {
         gameState = 'TITLE';
@@ -674,11 +678,12 @@ function setPlayerSize(newSize) {
 let typewriterHandle = null;
 
 function openDialogue(text) {
-    if (!text) return;
+    if (!text || dialogueActive) return;
     dialogueActive = true;
-    const diagElement = document.getElementById('dialogue-text');
-    diagElement.innerText = '';
-    document.getElementById('dialogue-box').style.display = 'flex';
+    const prompt = document.getElementById('interaction-prompt');
+    prompt.innerHTML = '<div id="typewriter-content" style="min-height: 20px;"></div>';
+    const content = document.getElementById('typewriter-content');
+    prompt.classList.add('dialogue-active');
     sfx.click();
 
     // Typewriter effect
@@ -686,15 +691,24 @@ function openDialogue(text) {
     let i = 0;
     typewriterHandle = setInterval(() => {
         if (i < text.length) {
-            diagElement.innerText += text.charAt(i);
+            content.innerText += text.charAt(i);
             i++;
-            // Play a tiny click sound for each character (optional, but subtle is better)
-            // sfx.play(1000 + Math.random() * 500, 0.02, 'sine', 0.02, false);
         } else {
             clearInterval(typewriterHandle);
             typewriterHandle = null;
+            // Add a "Close" tip
+            const rawKey = controls.interact || 'E';
+            const keyName = rawKey.replace('Key', '').replace('Digit', '');
+            const tip = document.createElement('div');
+            tip.innerText = `[${keyName}] CLOSE`;
+            tip.style.fontSize = '9px';
+            tip.style.opacity = '0.5';
+            tip.style.marginTop = '8px';
+            tip.style.borderTop = '1px solid rgba(255,255,255,0.1)';
+            tip.style.paddingTop = '4px';
+            prompt.appendChild(tip);
         }
-    }, 40);
+    }, 25);
 }
 
 function closeDialogue() {
@@ -703,17 +717,29 @@ function closeDialogue() {
         typewriterHandle = null;
     }
     dialogueActive = false;
-    document.getElementById('dialogue-box').style.display = 'none';
+    const prompt = document.getElementById('interaction-prompt');
+    prompt.classList.remove('dialogue-active');
     sfx.click();
 }
 
 // 4. LEVEL LOGIC
 function initLevel() {
     if (isCustomMode && customLevelData) {
-        worldObjects = JSON.parse(JSON.stringify(customLevelData)); // Deep copy to avoid mutation
+        // Deep copy simple level objects to avoid mutation and circular structure risks
+        worldObjects = customLevelData.map(obj => {
+            const copy = { ...obj };
+            // Ensure no complex internal properties from previous runs persist
+            delete copy.oldX;
+            delete copy.oldY;
+            delete copy.currentX;
+            delete copy.currentY;
+            delete copy.currentAngle;
+            return copy;
+        });
         document.getElementById('level-display').innerText = "CUSTOM";
     } else {
-        worldObjects = LEVEL_DATABASE[currentLevelIndex];
+        // Even for campaign levels, it's safer to copy to prevent cross-level mutation
+        worldObjects = LEVEL_DATABASE[currentLevelIndex].map(obj => ({ ...obj }));
         document.getElementById('level-display').innerText = currentLevelIndex + 1;
     }
     
@@ -795,7 +821,7 @@ window.addEventListener('keydown', (e) => {
         if (dialogueActive) {
             closeDialogue();
         } else if (currentNpc) {
-            openDialogue(currentNpc.dialogue);
+            openDialogue(currentNpc.dialogue || "Hello there!");
         }
     }
 });
@@ -823,6 +849,7 @@ function setupTouchEvents() {
     attach('touch-left', 'left');
     attach('touch-right', 'right');
     attach('touch-jump', 'jump');
+    attach('touch-interact', 'interact');
 }
 setupTouchEvents();
 updateSettingsUI();
@@ -903,41 +930,69 @@ function update(timestamp) {
 
     // --- 3. INPUTS & PHYSICS ---
     currentNpc = null;
-    document.getElementById('interaction-prompt').style.display = 'none';
+    const prompt = document.getElementById('interaction-prompt');
+    if (!dialogueActive) prompt.style.display = 'none';
 
-    worldObjects.forEach(obj => {
-        if (obj.type === 'NPC') {
-            const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
-            const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 100) {
-                currentNpc = obj;
-                const prompt = document.getElementById('interaction-prompt');
-                prompt.style.display = 'block';
-                // Position prompt above NPC (relative to game-container)
-                prompt.style.left = (obj.currentX + obj.width / 2) + 'px';
-                prompt.style.top = (obj.currentY - 30) + 'px';
+    if (dialogueActive) {
+        // Find the NPC we were talking to to keep position updated
+        worldObjects.forEach(obj => {
+            if (obj.type === 'NPC') {
+                const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
+                const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 120) currentNpc = obj; 
             }
-        }
-    });
+        });
 
-    if ((keys[controls.jump] || touchKeys.jump) && player.coyoteCounter > 0) {
-        player.velY = jumpForce;
-        player.jumping = true;
-        player.coyoteCounter = 0; // Use up coyote time immediately
-        sfx.jump();
-    }
-    
-    player.coyoteCounter -= dt;
-    
-    if (keys[controls.left] || touchKeys.left) {
-        player.velX -= acceleration * dt;
-        addTrail(player.x, player.y, player.width, player.height, player.color);
-    } else if (keys[controls.right] || touchKeys.right) {
-        player.velX += acceleration * dt;
-        addTrail(player.x, player.y, player.width, player.height, player.color);
+        if (currentNpc) {
+            prompt.style.display = 'block';
+            prompt.style.left = (currentNpc.currentX + currentNpc.width / 2) + 'px';
+            prompt.style.top = (currentNpc.currentY - 30) - (prompt.offsetHeight/2) + 'px';
+        }
+
+        // Pause movement and timer when talking
+        player.velX = 0;
     } else {
-        player.velX *= Math.pow(friction, dt);
+        worldObjects.forEach(obj => {
+            if (obj.type === 'NPC') {
+                const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
+                const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < 100) {
+                    currentNpc = obj;
+                    prompt.style.display = 'block';
+                    
+                    // Show actual interact key in prompt
+                    const rawKey = controls.interact || 'E';
+                    const keyName = rawKey.replace('Key', '').replace('Digit', '');
+                    prompt.innerText = `[${keyName}] TALK`;
+
+                    // Position prompt above NPC (relative to game-container)
+                    prompt.style.left = (obj.currentX + obj.width / 2) + 'px';
+                    prompt.style.top = (obj.currentY - 30) + 'px';
+                    prompt.style.maxWidth = '200px';
+                }
+            }
+        });
+
+        if ((keys[controls.jump] || touchKeys.jump) && player.coyoteCounter > 0) {
+            player.velY = jumpForce;
+            player.jumping = true;
+            player.coyoteCounter = 0; 
+            sfx.jump();
+        }
+        
+        player.coyoteCounter -= dt;
+        
+        if (keys[controls.left] || touchKeys.left) {
+            player.velX -= acceleration * dt;
+            addTrail(player.x, player.y, player.width, player.height, player.color);
+        } else if (keys[controls.right] || touchKeys.right) {
+            player.velX += acceleration * dt;
+            addTrail(player.x, player.y, player.width, player.height, player.color);
+        } else {
+            player.velX *= Math.pow(friction, dt);
+        }
     }
 
     player.velY += gravity * dt;

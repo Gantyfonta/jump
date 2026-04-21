@@ -308,6 +308,57 @@ button.active {
     border-color: var(--accent-blue);
 }
 
+#touch-interact {
+    font-size: 16px;
+    background: rgba(253, 121, 168, 0.2);
+    border-color: rgba(253, 121, 168, 0.4);
+}
+
+#touch-interact:active {
+    background: rgba(253, 121, 168, 0.4);
+    border-color: #fd79a8;
+}
+
+#interaction-prompt {
+    display: none;
+    position: absolute;
+    color: white;
+    background: rgba(0,0,0,0.85);
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+    max-width: 280px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    transition: transform 0.2s, top 0.2s;
+}
+
+#interaction-prompt::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(0,0,0,0.85);
+}
+
+#interaction-prompt.dialogue-active {
+    background: rgba(20, 20, 25, 0.95);
+    border-color: var(--accent-blue);
+    padding: 15px 20px;
+    font-size: 14px;
+    color: var(--text-primary);
+    transform: translateX(-50%) translateY(-10px);
+}
+
 .dialogue-container {
     background: var(--glass);
     backdrop-filter: blur(20px);
