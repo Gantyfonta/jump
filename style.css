@@ -308,3 +308,21 @@ button.active {
     border-color: var(--accent-blue);
 }
 
+.dialogue-container {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    padding: 30px;
+    border-radius: 16px;
+    max-width: 500px;
+    width: 80%;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+#dialogue-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    line-height: 1.6;
+    color: white;
+}
+

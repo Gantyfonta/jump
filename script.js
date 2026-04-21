@@ -163,6 +163,8 @@ let startTime = 0;
 let elapsedTime = 0;
 let timerRunning = false;
 let timerFinished = false;
+let dialogueActive = false;
+let currentNpc = null;
 
 function formatTime(ms) {
     let minutes = Math.floor(ms / 60000);
@@ -279,7 +281,7 @@ const LEVEL_DATABASE = [
         {"x":40.5,"y":278.1875,"width":39,"height":33,"type":"SPAWN"},
         {"x":5.5,"y":395.1875,"width":800,"height":12,"type":"SPIKE"}
     ], 
-    [{"x":0,"y":-15,"width":800,"height":20,"type":"PLATFORM","angle":0,"currentX":0,"currentY":-15,"currentAngle":0},{"x":5.5,"y":45.1875,"width":84,"height":17,"type":"PLATFORM","currentX":5.5,"currentY":45.1875,"currentAngle":0},{"x":200.5,"y":-12.8125,"width":20,"height":59,"type":"PLATFORM","currentX":200.5,"currentY":-12.8125,"currentAngle":0},{"x":22.5,"y":6.1875,"width":19,"height":22,"type":"SPAWN","currentX":22.5,"currentY":6.1875,"currentAngle":0},{"x":-0.5,"y":148.1875,"width":147,"height":25,"type":"SPIKE","currentX":-0.5,"currentY":148.1875,"currentAngle":0},{"x":144.5,"y":149.1875,"width":74,"height":29,"type":"SPIKE","currentX":144.5,"currentY":149.1875,"currentAngle":0},{"x":-0.5,"y":162.1875,"width":238,"height":62,"type":"PLATFORM","currentX":-0.5,"currentY":162.1875,"currentAngle":0},{"x":184.5,"y":94.1875,"width":180,"height":131,"type":"PLATFORM","currentX":184.5,"currentY":94.1875,"currentAngle":0},{"x":409.5,"y":-0.8125,"width":15,"height":228,"type":"PLATFORM","currentX":409.5,"currentY":-0.8125,"currentAngle":0},{"x":356.5,"y":326.1875,"width":70,"height":22,"type":"SPIKE","currentX":356.5,"currentY":326.1875,"currentAngle":0},{"x":199.5,"y":324.1875,"width":191,"height":21,"type":"PLATFORM","currentX":199.5,"currentY":324.1875,"currentAngle":0},{"x":6.5,"y":393.1875,"width":794,"height":14,"type":"PLATFORM","currentX":6.5,"currentY":393.1875,"currentAngle":0},{"x":-0.5,"y":217.1875,"width":35,"height":190,"type":"PLATFORM","currentX":-0.5,"currentY":217.1875,"currentAngle":0},{"x":417.5,"y":219.1875,"width":7,"height":107,"type":"SPIKE","currentX":417.5,"currentY":219.1875,"currentAngle":0},{"x":416.5,"y":218.1875,"width":265,"height":8,"type":"PLATFORM","currentX":416.5,"currentY":218.1875,"currentAngle":0},{"x":484.5,"y":350.1875,"width":30,"height":12,"type":"PLATFORM","currentX":484.5,"currentY":350.1875,"currentAngle":0},{"x":582.5,"y":305.1875,"width":50,"height":47,"type":"PLATFORM","currentX":582.5,"currentY":305.1875,"currentAngle":0},{"x":709.5,"y":288.1875,"width":79,"height":11,"type":"PLATFORM","currentX":709.5,"currentY":288.1875,"currentAngle":0},{"x":593.5,"y":4.1875,"width":9,"height":82,"type":"PLATFORM","currentX":593.5,"currentY":4.1875,"currentAngle":0},{"x":590.5,"y":-0.8125,"width":211,"height":9,"type":"PLATFORM","currentX":590.5,"currentY":-0.8125,"currentAngle":0},{"x":599.5,"y":78.1875,"width":142,"height":8,"type":"PLATFORM","currentX":599.5,"currentY":78.1875,"currentAngle":0},{"x":743.5,"y":80.1875,"width":58,"height":7,"type":"PLATFORM","tx":683.5,"ty":79.1875,"isMoving":true,"currentX":741.2089847917824,"currentY":80.14931641319637,"currentAngle":0},{"x":613.5,"y":24.1875,"width":31,"height":26,"type":"GOAL","currentX":613.5,"currentY":24.1875,"currentAngle":0},{"x":654.5,"y":134.1875,"width":100,"height":20,"type":"PLATFORM","currentX":654.5,"currentY":134.1875,"currentAngle":0},{"x":442.5,"y":110.1875,"width":62,"height":17,"type":"PLATFORM","currentX":442.5,"currentY":110.1875,"currentAngle":0},{"x":451.5,"y":55.1875,"width":6,"height":37,"type":"PLATFORM","currentX":451.5,"currentY":55.1875,"currentAngle":0},{"x":454.5,"y":55.1875,"width":20,"height":9,"type":"PLATFORM","currentX":454.5,"currentY":55.1875,"currentAngle":0},{"x":468.5,"y":62.1875,"width":9,"height":12,"type":"PLATFORM","currentX":468.5,"currentY":62.1875,"currentAngle":0},{"x":455.5,"y":73.1875,"width":17,"height":9,"type":"PLATFORM","currentX":455.5,"currentY":73.1875,"currentAngle":0},{"x":471.5,"y":78.1875,"width":9,"height":14,"type":"PLATFORM","currentX":471.5,"currentY":78.1875,"currentAngle":0},{"x":488.5,"y":57.1875,"width":23,"height":6,"type":"PLATFORM","currentX":488.5,"currentY":57.1875,"currentAngle":0},{"x":492.5,"y":83.1875,"width":20,"height":7,"type":"PLATFORM","currentX":492.5,"currentY":83.1875,"currentAngle":0},{"x":497.5,"y":61.1875,"width":9,"height":25,"type":"PLATFORM","currentX":497.5,"currentY":61.1875,"currentAngle":0},{"x":533.5,"y":64.1875,"width":6,"height":26,"type":"PLATFORM","currentX":533.5,"currentY":64.1875,"currentAngle":0},{"x":533.5,"y":58.1875,"width":20,"height":11,"type":"PLATFORM","currentX":533.5,"currentY":58.1875,"currentAngle":0},{"x":538.5,"y":75.1875,"width":13,"height":6,"type":"PLATFORM","currentX":538.5,"currentY":75.1875,"currentAngle":0},{"x":549.5,"y":70.1875,"width":7,"height":11,"type":"PLATFORM","currentX":549.5,"currentY":70.1875,"currentAngle":0},{"x":550.5,"y":67.1875,"width":7,"height":8,"type":"PLATFORM","currentX":550.5,"currentY":67.1875,"currentAngle":0},{"x":26.5,"y":223.1875,"width":20,"height":175,"type":"SPIKE","currentX":26.5,"currentY":223.1875,"currentAngle":0},{"x":469.5,"y":384.1875,"width":337,"height":21,"type":"SPIKE","currentX":469.5,"currentY":384.1875,"currentAngle":0},{"x":218.5,"y":308.1875,"width":16,"height":18,"type":"PORTAL_SHRINK","currentX":218.5,"currentY":308.1875,"currentAngle":0}],
+    [{"x":0,"y":-15,"width":800,"height":20,"type":"PLATFORM","angle":0,"currentX":0,"currentY":-15,"currentAngle":0},{"x":5.5,"y":45.1875,"width":84,"height":17,"type":"PLATFORM","currentX":5.5,"currentY":45.1875,"currentAngle":0},{"x":200.5,"y":-12.8125,"width":20,"height":59,"type":"PLATFORM","currentX":200.5,"currentY":-12.8125,"currentAngle":0},{"x":22.5,"y":6.1875,"width":19,"height":22,"type":"SPAWN","currentX":22.5,"currentY":6.1875,"currentAngle":0},{"x":-0.5,"y":148.1875,"width":147,"height":25,"type":"SPIKE","currentX":-0.5,"currentY":148.1875,"currentAngle":0},{"x":144.5,"y":149.1875,"width":74,"height":29,"type":"SPIKE","currentX":144.5,"currentY":149.1875,"currentAngle":0},{"x":-0.5,"y":162.1875,"width":238,"height":62,"type":"PLATFORM","currentX":-0.5,"currentY":162.1875,"currentAngle":0},{"x":184.5,"y":94.1875,"width":180,"height":131,"type":"PLATFORM","currentX":184.5,"currentY":94.1875,"currentAngle":0},{"x":409.5,"y":-0.8125,"width":15,"height":228,"type":"PLATFORM","currentX":409.5,"currentY":-0.8125,"currentAngle":0},{"x":356.5,"y":326.1875,"width":70,"height":22,"type":"SPIKE","currentX":356.5,"currentY":326.1875,"currentAngle":0},{"x":199.5,"y":324.1875,"width":191,"height":21,"type":"PLATFORM","currentX":199.5,"currentY":324.1875,"currentAngle":0},{"x":6.5,"y":393.1875,"width":794,"height":14,"type":"PLATFORM","currentX":6.5,"currentY":393.1875,"currentAngle":0},{"x":-0.5,"y":217.1875,"width":35,"height":190,"type":"PLATFORM","currentX":-0.5,"currentY":217.1875,"currentAngle":0},{"x":417.5,"y":219.1875,"width":7,"height":107,"type":"SPIKE","currentX":417.5,"currentY":219.1875,"currentAngle":0},{"x":416.5,"y":218.1875,"width":265,"height":8,"type":"PLATFORM","currentX":416.5,"currentY":218.1875,"currentAngle":0},{"x":484.5,"y":350.1875,"width":30,"height":12,"type":"PLATFORM","currentX":484.5,"currentY":350.1875,"currentAngle":0},{"x":582.5,"y":305.1875,"width":50,"height":47,"type":"PLATFORM","currentX":582.5,"currentY":305.1875,"currentAngle":0},{"x":709.5,"y":288.1875,"width":79,"height":11,"type":"PLATFORM","currentX":709.5,"currentY":288.1875,"currentAngle":0},{"x":593.5,"y":4.1875,"width":9,"height":82,"type":"PLATFORM","currentX":593.5,"currentY":4.1875,"currentAngle":0},{"x":590.5,"y":-0.8125,"width":211,"height":9,"type":"PLATFORM","currentX":590.5,"currentY":-0.8125,"currentAngle":0},{"x":599.5,"y":78.1875,"width":142,"height":8,"type":"PLATFORM","currentX":599.5,"currentY":78.1875,"currentAngle":0},{"x":743.5,"y":80.1875,"width":58,"height":7,"type":"PLATFORM","tx":683.5,"ty":79.1875,"isMoving":true,"currentX":687.1067640458604,"currentY":79.24761273409767,"currentAngle":0},{"x":613.5,"y":24.1875,"width":31,"height":26,"type":"GOAL","currentX":613.5,"currentY":24.1875,"currentAngle":0},{"x":654.5,"y":134.1875,"width":100,"height":20,"type":"PLATFORM","currentX":654.5,"currentY":134.1875,"currentAngle":0},{"x":442.5,"y":110.1875,"width":62,"height":17,"type":"PLATFORM","currentX":442.5,"currentY":110.1875,"currentAngle":0},{"x":451.5,"y":55.1875,"width":6,"height":37,"type":"PLATFORM","currentX":451.5,"currentY":55.1875,"currentAngle":0},{"x":454.5,"y":55.1875,"width":20,"height":9,"type":"PLATFORM","currentX":454.5,"currentY":55.1875,"currentAngle":0},{"x":468.5,"y":62.1875,"width":9,"height":12,"type":"PLATFORM","currentX":468.5,"currentY":62.1875,"currentAngle":0},{"x":455.5,"y":73.1875,"width":17,"height":9,"type":"PLATFORM","currentX":455.5,"currentY":73.1875,"currentAngle":0},{"x":471.5,"y":78.1875,"width":9,"height":14,"type":"PLATFORM","currentX":471.5,"currentY":78.1875,"currentAngle":0},{"x":488.5,"y":57.1875,"width":23,"height":6,"type":"PLATFORM","currentX":488.5,"currentY":57.1875,"currentAngle":0},{"x":492.5,"y":83.1875,"width":20,"height":7,"type":"PLATFORM","currentX":492.5,"currentY":83.1875,"currentAngle":0},{"x":497.5,"y":61.1875,"width":9,"height":25,"type":"PLATFORM","currentX":497.5,"currentY":61.1875,"currentAngle":0},{"x":533.5,"y":64.1875,"width":6,"height":26,"type":"PLATFORM","currentX":533.5,"currentY":64.1875,"currentAngle":0},{"x":533.5,"y":58.1875,"width":20,"height":11,"type":"PLATFORM","currentX":533.5,"currentY":58.1875,"currentAngle":0},{"x":538.5,"y":75.1875,"width":13,"height":6,"type":"PLATFORM","currentX":538.5,"currentY":75.1875,"currentAngle":0},{"x":549.5,"y":70.1875,"width":7,"height":11,"type":"PLATFORM","currentX":549.5,"currentY":70.1875,"currentAngle":0},{"x":550.5,"y":67.1875,"width":7,"height":8,"type":"PLATFORM","currentX":550.5,"currentY":67.1875,"currentAngle":0},{"x":26.5,"y":223.1875,"width":20,"height":175,"type":"SPIKE","currentX":26.5,"currentY":223.1875,"currentAngle":0},{"x":469.5,"y":384.1875,"width":337,"height":21,"type":"SPIKE","currentX":469.5,"currentY":384.1875,"currentAngle":0},{"x":325.5,"y":76.1875,"width":16,"height":18,"type":"PORTAL_SHRINK","currentX":218.5,"currentY":308.1875,"currentAngle":0}],
 
 [
     {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},{"x":225,"y":139.1875,"width":70,"height":244,"type":"PLATFORM"},{"x":523,"y":70.1875,"width":80,"height":315,"type":"PLATFORM"},{"x":192,"y":298.1875,"width":41,"height":23,"type":"PLATFORM"},{"x":191,"y":223.1875,"width":38,"height":25,"type":"PLATFORM"},{"x":193,"y":160.1875,"width":45,"height":25,"type":"PLATFORM"},{"x":450.875,"y":69.9140625,"width":74,"height":20,"type":"PLATFORM","tx":448.875,"ty":379.9140625,"isMoving":true},{"x":500,"y":283.9971618652344,"width":29,"height":37,"type":"PLATFORM"},{"x":459,"y":201.99716186523438,"width":32,"height":32,"type":"PLATFORM"},{"x":500,"y":122.99716186523438,"width":33,"height":42,"type":"PLATFORM"},{"x":542.75,"y":64.671875,"width":45,"height":6,"type":"SPIKE","tx":542.75,"ty":71.671875,"isMoving":true},{"x":12.75,"y":329.671875,"width":24,"height":19,"type":"SPAWN"},{"x":260.75,"y":126.671875,"width":36,"height":15,"type":"PORTAL_SHRINK"},{"x":602.75,"y":361.671875,"width":200,"height":46,"type":"SPIKE"},{"x":694.75,"y":24.671875,"width":45,"height":40,"type":"GOAL"},{"x":527.75,"y":62.671875,"width":13,"height":9,"type":"PORTAL_NORMAL"}
@@ -288,8 +290,7 @@ const LEVEL_DATABASE = [
 
 [
     {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},{"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},{"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},{"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},{"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},{"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
-]
-    
+]  
 ];
 
 let currentLevelIndex = 0;
@@ -302,7 +303,8 @@ let controls = {
     left: 'ArrowLeft',
     right: 'ArrowRight',
     jump: 'Space',
-    reset: 'KeyR'
+    reset: 'KeyR',
+    interact: 'KeyE'
 };
 
 // Load controls from local storage
@@ -363,6 +365,9 @@ function updateSettingsUI() {
 
 function startGame() {
     gameState = 'PLAYING';
+    dialogueActive = false;
+    document.getElementById('dialogue-box').style.display = 'none';
+    document.getElementById('interaction-prompt').style.display = 'none';
     document.getElementById('title-screen').style.display = 'none';
     document.getElementById('controls-screen').style.display = 'none';
     document.getElementById('leaderboard-screen').style.display = 'none';
@@ -382,6 +387,9 @@ function startGame() {
 }
 
 function resetRun(backToMenu = true) {
+    dialogueActive = false;
+    document.getElementById('dialogue-box').style.display = 'none';
+    document.getElementById('interaction-prompt').style.display = 'none';
     if (backToMenu) {
         gameState = 'TITLE';
         currentLevelIndex = 0;
@@ -615,6 +623,21 @@ function setPlayerSize(newSize) {
     player.y -= heightDiff; 
 }
 
+// --- NPC & DIALOGUE ---
+function openDialogue(text) {
+    if (!text) return;
+    dialogueActive = true;
+    document.getElementById('dialogue-text').innerText = text;
+    document.getElementById('dialogue-box').style.display = 'flex';
+    sfx.click();
+}
+
+function closeDialogue() {
+    dialogueActive = false;
+    document.getElementById('dialogue-box').style.display = 'none';
+    sfx.click();
+}
+
 // 4. LEVEL LOGIC
 function initLevel() {
     worldObjects = LEVEL_DATABASE[currentLevelIndex];
@@ -680,6 +703,13 @@ window.addEventListener('keydown', (e) => {
     if (e.code === controls.reset && (gameState === 'PLAYING' || gameState === 'WIN')) {
         resetRun(false);
     }
+    if (e.code === controls.interact && gameState === 'PLAYING') {
+        if (dialogueActive) {
+            closeDialogue();
+        } else if (currentNpc) {
+            openDialogue(currentNpc.dialogue);
+        }
+    }
 });
 window.addEventListener('keyup', (e) => keys[e.code] = false);
 
@@ -716,6 +746,12 @@ function update(timestamp) {
     lastTime = timestamp;
 
     if (gameState !== 'PLAYING') {
+        requestAnimationFrame(update);
+        return;
+    }
+
+    if (dialogueActive) {
+        lastTime = timestamp;
         requestAnimationFrame(update);
         return;
     }
@@ -778,6 +814,25 @@ function update(timestamp) {
     }
 
     // --- 3. INPUTS & PHYSICS ---
+    currentNpc = null;
+    document.getElementById('interaction-prompt').style.display = 'none';
+
+    worldObjects.forEach(obj => {
+        if (obj.type === 'NPC') {
+            const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
+            const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 100) {
+                currentNpc = obj;
+                const prompt = document.getElementById('interaction-prompt');
+                prompt.style.display = 'block';
+                // Position prompt above NPC (relative to game-container)
+                prompt.style.left = (obj.currentX + obj.width / 2) + 'px';
+                prompt.style.top = (obj.currentY - 30) + 'px';
+            }
+        }
+    });
+
     if ((keys[controls.jump] || touchKeys.jump) && player.coyoteCounter > 0) {
         player.velY = jumpForce;
         player.jumping = true;
@@ -967,6 +1022,10 @@ function draw() {
         else if (obj.type === 'PORTAL_SHRINK') { color = '#9c88ff'; glow = true; }
         else if (obj.type === 'PORTAL_GROW') { color = '#e1b12c'; glow = true; }
         else if (obj.type === 'PORTAL_NORMAL') { color = '#00a8ff'; glow = true; }
+        else if (obj.type === 'NPC') {
+            color = '#fd79a8';
+            glow = true;
+        }
         
         if (glow) {
             ctx.shadowBlur = 15;
@@ -974,7 +1033,20 @@ function draw() {
         }
         
         ctx.fillStyle = color;
-        ctx.fillRect(-obj.width / 2, -obj.height / 2, obj.width, obj.height);
+        if (obj.type === 'NPC') {
+            // NPC character drawing (matching editor look)
+            ctx.beginPath();
+            ctx.arc(0, -obj.height/4, obj.width/3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillRect(-obj.width/2.5, 0, obj.width/1.25, obj.height/2);
+            
+            // Eyes
+            ctx.fillStyle = 'white';
+            ctx.fillRect(-obj.width/8, -obj.height/4 - obj.height/10, obj.width/15, obj.height/15);
+            ctx.fillRect(obj.width/15, -obj.height/4 - obj.height/10, obj.width/15, obj.height/15);
+        } else {
+            ctx.fillRect(-obj.width / 2, -obj.height / 2, obj.width, obj.height);
+        }
         
         ctx.restore();
     });
@@ -1013,6 +1085,8 @@ window.deleteScore = deleteScore;
 window.toggleMobileMode = toggleMobileMode;
 window.toggleSFX = toggleSFX;
 window.setPlayerSize = setPlayerSize;
+window.openDialogue = openDialogue;
+window.closeDialogue = closeDialogue;
 
 // START THE GAME
 requestAnimationFrame(update);

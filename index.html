@@ -51,6 +51,7 @@
                 <div class="control-item"><span>Move Left:</span> <button class="key-btn" id="key-left" onclick="remapKey('left')">ArrowLeft</button></div>
                 <div class="control-item"><span>Move Right:</span> <button class="key-btn" id="key-right" onclick="remapKey('right')">ArrowRight</button></div>
                 <div class="control-item"><span>Jump:</span> <button class="key-btn" id="key-jump" onclick="remapKey('jump')">Space</button></div>
+                <div class="control-item"><span>Interact:</span> <button class="key-btn" id="key-interact" onclick="remapKey('interact')">KeyE</button></div>
                 <div class="control-item"><span>Reset Run:</span> <button class="key-btn" id="key-reset" onclick="remapKey('reset')">KeyR</button></div>
                 <div class="control-item"><span>Back to Menu:</span> <button class="key-btn">Esc</button></div>
             </div>
@@ -76,6 +77,16 @@
                 <button id="submit-score-btn" onclick="submitScore()" style="padding: 10px 20px;">Submit Score</button>
             </div>
             <button onclick="resetRun()" style="margin-top: 20px; background: #555; box-shadow: 0 4px #333;">Back to Menu</button>
+        </div>
+
+        <!-- NPC Interaction UI -->
+        <div id="interaction-prompt" style="display: none; position: absolute; color: white; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 12px; transform: translateX(-50%); pointer-events: none; z-index: 20;">[E] TALK</div>
+        
+        <div id="dialogue-box" class="overlay" style="display: none; background: rgba(0,0,0,0.85);">
+            <div class="dialogue-container">
+                <div id="dialogue-text">Hello adventurer!</div>
+                <button onclick="closeDialogue()" style="margin-top: 20px; width: auto;">Close [E]</button>
+            </div>
         </div>
 
         <!-- Admin Panel -->

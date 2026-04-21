@@ -18,6 +18,7 @@
         #type-SHRINK { background: #9c88ff; }
         #type-NORMAL { background: #00a8ff; }
         #type-GROW { background: #e1b12c; }
+        #type-NPC { background: #fd79a8; }
        
         .action-btn { background: #555; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
         .action-btn:hover { background: #777; }
@@ -41,6 +42,7 @@
         <div id="type-SHRINK" class="type-btn" onclick="setType('PORTAL_SHRINK', 'SHRINK')">Shrink</div>
         <div id="type-NORMAL" class="type-btn" onclick="setType('PORTAL_NORMAL', 'NORMAL')">Normal</div>
         <div id="type-GROW" class="type-btn" onclick="setType('PORTAL_GROW', 'GROW')">Grow</div>
+        <div id="type-NPC" class="type-btn" onclick="setType('NPC')">NPC</div>
        
         <div style="border-left: 1px solid #555; height: 30px; margin: 0 5px;"></div>
        
@@ -69,6 +71,7 @@
         <span style="font-weight: bold; color: #2ecc71;">Object Properties:</span>
         <label>Spin Speed: <input type="number" id="prop-spin" step="1" style="width: 60px;" oninput="updateProp('spinSpeed', this.value)"></label>
         <label>Move Speed (Freq): <input type="number" id="prop-move" step="0.1" style="width: 60px;" oninput="updateProp('moveSpeed', this.value)"></label>
+        <label id="label-dialogue">Dialogue: <input type="text" id="prop-dialogue" style="width: 200px;" oninput="updateProp('dialogue', this.value)"></label>
         <span style="font-size: 10px; color: #aaa; margin-left: 10px;">(Select object to edit)</span>
     </div>
 
@@ -76,7 +79,7 @@
 
     <div class="help">
         <b>Controls:</b> Drag to Draw | <b>Resize Mode:</b> Drag bottom-right corner | Right Click to Delete | Ctrl+Z to Undo | <b>\ to Play</b> <br>
-        To make a platform move: Click 'Mode: Draw' to switch to 'Set Trajectory', then drag from an object to its destination.
+        <b>NPCs:</b> Use the NPC type to add characters. Select them in Move/Resize mode to edit their dialogue in the properties panel.
     </div>
 
     <script>
@@ -90,6 +93,7 @@
         let currentMode = 'DRAW'; // DRAW, MOVE, ROTATE, DELETE, TRAJECTORY
         let selectedObj = null;
         let isDrawing = false;
+        let isDragging = false;
         let startX, startY, curX, curY;
         let offsetX, offsetY;
 
@@ -173,6 +177,8 @@
                     selectedObj.isSpinning = selectedObj.spinSpeed !== 0;
                 } else if (prop === 'moveSpeed') {
                     selectedObj.moveSpeed = parseFloat(val);
+                } else if (prop === 'dialogue') {
+                    selectedObj.dialogue = val;
                 }
                 render();
             }
@@ -238,7 +244,8 @@
             SPAWN: '#2ed573',
             PORTAL_SHRINK: '#9c88ff',
             PORTAL_NORMAL: '#00a8ff',
-            PORTAL_GROW: '#e1b12c'
+            PORTAL_GROW: '#e1b12c',
+            NPC: '#fd79a8'
         };
 
         function saveState() {
@@ -281,6 +288,7 @@
             } else {
                 selectedObj = objects.find(o => mx > o.x && mx < o.x+o.width && my > o.y && my < o.y+o.height);
                 if (selectedObj) {
+                    isDragging = true;
                     saveState();
                     if (currentMode === 'MOVE') {
                         offsetX = mx - selectedObj.x;
@@ -303,6 +311,15 @@
                         document.getElementById('props-panel').style.display = 'flex';
                         document.getElementById('prop-spin').value = selectedObj.spinSpeed || 0;
                         document.getElementById('prop-move').value = selectedObj.moveSpeed || 1;
+                        
+                        const diagInput = document.getElementById('prop-dialogue');
+                        const diagLabel = document.getElementById('label-dialogue');
+                        if (selectedObj.type === 'NPC') {
+                            diagLabel.style.display = 'inline';
+                            diagInput.value = selectedObj.dialogue || '';
+                        } else {
+                            diagLabel.style.display = 'none';
+                        }
                     }
                 } else {
                     document.getElementById('props-panel').style.display = 'none';
@@ -316,7 +333,7 @@
             curX = e.clientX - r.left;
             curY = e.clientY - r.top;
 
-            if (selectedObj) {
+            if (selectedObj && isDragging) {
                 if (currentMode === 'MOVE') {
                     selectedObj.x = curX - offsetX;
                     selectedObj.y = curY - offsetY;
@@ -353,7 +370,7 @@
                 } else { history.pop(); }
             }
             isDrawing = false;
-            selectedObj = null;
+            isDragging = false;
             render();
         };
 
@@ -482,7 +499,22 @@
                 ctx.translate(drawX + o.width / 2, drawY + o.height / 2);
                 ctx.rotate(drawAngle * Math.PI / 180);
                 ctx.fillStyle = colors[o.type] || '#fff';
-                ctx.fillRect(-o.width / 2, -o.height / 2, o.width, o.height);
+                
+                if (o.type === 'NPC') {
+                    // Draw a little character shape
+                    ctx.beginPath();
+                    ctx.arc(0, -o.height/4, o.width/3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(-o.width/2.5, 0, o.width/1.25, o.height/2);
+                    
+                    // Eyes
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(-o.width/8, -o.height/4 - o.height/10, o.width/15, o.height/15);
+                    ctx.fillRect(o.width/15, -o.height/4 - o.height/10, o.width/15, o.height/15);
+                } else {
+                    ctx.fillRect(-o.width / 2, -o.height / 2, o.width, o.height);
+                }
+                
                 ctx.restore();
 
                 if (o.isMoving) {
