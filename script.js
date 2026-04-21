@@ -75,6 +75,14 @@ canvas.height = 400;
 let mobileMode = localStorage.getItem('platformer_mobile') === 'true';
 let sfxEnabled = localStorage.getItem('platformer_sfx') !== 'false';
 
+// --- CHANNEL SYSTEM ---
+let channelStates = {}; // Tracks activation state for lever/button channels
+function toggleChannel(id) {
+    if (!id && id !== 0) return;
+    channelStates[id] = !channelStates[id];
+    sfx.click(); // Trigger click sound
+}
+
 // --- AUDIO SYSTEM ---
 class SoundEngine {
     constructor() {
@@ -165,7 +173,7 @@ let elapsedTime = 0;
 let timerRunning = false;
 let timerFinished = false;
 let dialogueActive = false;
-let currentNpc = null;
+let currentInteractable = null;
 let isCustomMode = false;
 let customLevelData = null;
 
@@ -284,15 +292,102 @@ const LEVEL_DATABASE = [
         {"x":40.5,"y":278.1875,"width":39,"height":33,"type":"SPAWN"},
         {"x":5.5,"y":395.1875,"width":800,"height":12,"type":"SPIKE"}
     ], 
-    [{"x":0,"y":-15,"width":800,"height":20,"type":"PLATFORM","angle":0,"currentX":0,"currentY":-15,"currentAngle":0},{"x":5.5,"y":45.1875,"width":84,"height":17,"type":"PLATFORM","currentX":5.5,"currentY":45.1875,"currentAngle":0},{"x":200.5,"y":-12.8125,"width":20,"height":59,"type":"PLATFORM","currentX":200.5,"currentY":-12.8125,"currentAngle":0},{"x":22.5,"y":6.1875,"width":19,"height":22,"type":"SPAWN","currentX":22.5,"currentY":6.1875,"currentAngle":0},{"x":-0.5,"y":148.1875,"width":147,"height":25,"type":"SPIKE","currentX":-0.5,"currentY":148.1875,"currentAngle":0},{"x":144.5,"y":149.1875,"width":74,"height":29,"type":"SPIKE","currentX":144.5,"currentY":149.1875,"currentAngle":0},{"x":-0.5,"y":162.1875,"width":238,"height":62,"type":"PLATFORM","currentX":-0.5,"currentY":162.1875,"currentAngle":0},{"x":184.5,"y":94.1875,"width":180,"height":131,"type":"PLATFORM","currentX":184.5,"currentY":94.1875,"currentAngle":0},{"x":409.5,"y":-0.8125,"width":15,"height":228,"type":"PLATFORM","currentX":409.5,"currentY":-0.8125,"currentAngle":0},{"x":356.5,"y":326.1875,"width":70,"height":22,"type":"SPIKE","currentX":356.5,"currentY":326.1875,"currentAngle":0},{"x":199.5,"y":324.1875,"width":191,"height":21,"type":"PLATFORM","currentX":199.5,"currentY":324.1875,"currentAngle":0},{"x":6.5,"y":393.1875,"width":794,"height":14,"type":"PLATFORM","currentX":6.5,"currentY":393.1875,"currentAngle":0},{"x":-0.5,"y":217.1875,"width":35,"height":190,"type":"PLATFORM","currentX":-0.5,"currentY":217.1875,"currentAngle":0},{"x":417.5,"y":219.1875,"width":7,"height":107,"type":"SPIKE","currentX":417.5,"currentY":219.1875,"currentAngle":0},{"x":416.5,"y":218.1875,"width":265,"height":8,"type":"PLATFORM","currentX":416.5,"currentY":218.1875,"currentAngle":0},{"x":484.5,"y":350.1875,"width":30,"height":12,"type":"PLATFORM","currentX":484.5,"currentY":350.1875,"currentAngle":0},{"x":582.5,"y":305.1875,"width":50,"height":47,"type":"PLATFORM","currentX":582.5,"currentY":305.1875,"currentAngle":0},{"x":709.5,"y":288.1875,"width":79,"height":11,"type":"PLATFORM","currentX":709.5,"currentY":288.1875,"currentAngle":0},{"x":593.5,"y":4.1875,"width":9,"height":82,"type":"PLATFORM","currentX":593.5,"currentY":4.1875,"currentAngle":0},{"x":590.5,"y":-0.8125,"width":211,"height":9,"type":"PLATFORM","currentX":590.5,"currentY":-0.8125,"currentAngle":0},{"x":599.5,"y":78.1875,"width":142,"height":8,"type":"PLATFORM","currentX":599.5,"currentY":78.1875,"currentAngle":0},{"x":743.5,"y":80.1875,"width":58,"height":7,"type":"PLATFORM","tx":683.5,"ty":79.1875,"isMoving":true,"currentX":687.1067640458604,"currentY":79.24761273409767,"currentAngle":0},{"x":613.5,"y":24.1875,"width":31,"height":26,"type":"GOAL","currentX":613.5,"currentY":24.1875,"currentAngle":0},{"x":654.5,"y":134.1875,"width":100,"height":20,"type":"PLATFORM","currentX":654.5,"currentY":134.1875,"currentAngle":0},{"x":442.5,"y":110.1875,"width":62,"height":17,"type":"PLATFORM","currentX":442.5,"currentY":110.1875,"currentAngle":0},{"x":451.5,"y":55.1875,"width":6,"height":37,"type":"PLATFORM","currentX":451.5,"currentY":55.1875,"currentAngle":0},{"x":454.5,"y":55.1875,"width":20,"height":9,"type":"PLATFORM","currentX":454.5,"currentY":55.1875,"currentAngle":0},{"x":468.5,"y":62.1875,"width":9,"height":12,"type":"PLATFORM","currentX":468.5,"currentY":62.1875,"currentAngle":0},{"x":455.5,"y":73.1875,"width":17,"height":9,"type":"PLATFORM","currentX":455.5,"currentY":73.1875,"currentAngle":0},{"x":471.5,"y":78.1875,"width":9,"height":14,"type":"PLATFORM","currentX":471.5,"currentY":78.1875,"currentAngle":0},{"x":488.5,"y":57.1875,"width":23,"height":6,"type":"PLATFORM","currentX":488.5,"currentY":57.1875,"currentAngle":0},{"x":492.5,"y":83.1875,"width":20,"height":7,"type":"PLATFORM","currentX":492.5,"currentY":83.1875,"currentAngle":0},{"x":497.5,"y":61.1875,"width":9,"height":25,"type":"PLATFORM","currentX":497.5,"currentY":61.1875,"currentAngle":0},{"x":533.5,"y":64.1875,"width":6,"height":26,"type":"PLATFORM","currentX":533.5,"currentY":64.1875,"currentAngle":0},{"x":533.5,"y":58.1875,"width":20,"height":11,"type":"PLATFORM","currentX":533.5,"currentY":58.1875,"currentAngle":0},{"x":538.5,"y":75.1875,"width":13,"height":6,"type":"PLATFORM","currentX":538.5,"currentY":75.1875,"currentAngle":0},{"x":549.5,"y":70.1875,"width":7,"height":11,"type":"PLATFORM","currentX":549.5,"currentY":70.1875,"currentAngle":0},{"x":550.5,"y":67.1875,"width":7,"height":8,"type":"PLATFORM","currentX":550.5,"currentY":67.1875,"currentAngle":0},{"x":26.5,"y":223.1875,"width":20,"height":175,"type":"SPIKE","currentX":26.5,"currentY":223.1875,"currentAngle":0},{"x":469.5,"y":384.1875,"width":337,"height":21,"type":"SPIKE","currentX":469.5,"currentY":384.1875,"currentAngle":0},{"x":325.5,"y":76.1875,"width":16,"height":18,"type":"PORTAL_SHRINK","currentX":218.5,"currentY":308.1875,"currentAngle":0}],
+    [
+        {"x":0,"y":-15,"width":800,"height":20,"type":"PLATFORM","angle":0,"currentX":0,"currentY":-15,"currentAngle":0},
+        {"x":5.5,"y":45.1875,"width":84,"height":17,"type":"PLATFORM","currentX":5.5,"currentY":45.1875,"currentAngle":0},
+        {"x":200.5,"y":-12.8125,"width":20,"height":59,"type":"PLATFORM","currentX":200.5,"currentY":-12.8125,"currentAngle":0},
+        {"x":22.5,"y":6.1875,"width":19,"height":22,"type":"SPAWN","currentX":22.5,"currentY":6.1875,"currentAngle":0},
+        {"x":-0.5,"y":148.1875,"width":147,"height":25,"type":"SPIKE","currentX":-0.5,"currentY":148.1875,"currentAngle":0},
+        {"x":144.5,"y":149.1875,"width":74,"height":29,"type":"SPIKE","currentX":144.5,"currentY":149.1875,"currentAngle":0},
+        {"x":-0.5,"y":162.1875,"width":238,"height":62,"type":"PLATFORM","currentX":-0.5,"currentY":162.1875,"currentAngle":0},
+        {"x":184.5,"y":94.1875,"width":180,"height":131,"type":"PLATFORM","currentX":184.5,"currentY":94.1875,"currentAngle":0},
+        {"x":409.5,"y":-0.8125,"width":15,"height":228,"type":"PLATFORM","currentX":409.5,"currentY":-0.8125,"currentAngle":0},
+        {"x":356.5,"y":326.1875,"width":70,"height":22,"type":"SPIKE","currentX":356.5,"currentY":326.1875,"currentAngle":0},
+        {"x":199.5,"y":324.1875,"width":191,"height":21,"type":"PLATFORM","currentX":199.5,"currentY":324.1875,"currentAngle":0},
+        {"x":6.5,"y":393.1875,"width":794,"height":14,"type":"PLATFORM","currentX":6.5,"currentY":393.1875,"currentAngle":0},
+        {"x":-0.5,"y":217.1875,"width":35,"height":190,"type":"PLATFORM","currentX":-0.5,"currentY":217.1875,"currentAngle":0},
+        {"x":417.5,"y":219.1875,"width":7,"height":107,"type":"SPIKE","currentX":417.5,"currentY":219.1875,"currentAngle":0},
+        {"x":416.5,"y":218.1875,"width":265,"height":8,"type":"PLATFORM","currentX":416.5,"currentY":218.1875,"currentAngle":0},
+        {"x":484.5,"y":350.1875,"width":30,"height":12,"type":"PLATFORM","currentX":484.5,"currentY":350.1875,"currentAngle":0},
+        {"x":582.5,"y":305.1875,"width":50,"height":47,"type":"PLATFORM","currentX":582.5,"currentY":305.1875,"currentAngle":0},
+        {"x":709.5,"y":288.1875,"width":79,"height":11,"type":"PLATFORM","currentX":709.5,"currentY":288.1875,"currentAngle":0},
+        {"x":593.5,"y":4.1875,"width":9,"height":82,"type":"PLATFORM","currentX":593.5,"currentY":4.1875,"currentAngle":0},
+        {"x":590.5,"y":-0.8125,"width":211,"height":9,"type":"PLATFORM","currentX":590.5,"currentY":-0.8125,"currentAngle":0},
+        {"x":599.5,"y":78.1875,"width":142,"height":8,"type":"PLATFORM","currentX":599.5,"currentY":78.1875,"currentAngle":0},
+        {"x":743.5,"y":80.1875,"width":58,"height":7,"type":"PLATFORM","tx":683.5,"ty":79.1875,"isMoving":true,"currentX":687.1067640458604,"currentY":79.24761273409767,"currentAngle":0},
+        {"x":613.5,"y":24.1875,"width":31,"height":26,"type":"GOAL","currentX":613.5,"currentY":24.1875,"currentAngle":0},
+        {"x":654.5,"y":134.1875,"width":100,"height":20,"type":"PLATFORM","currentX":654.5,"currentY":134.1875,"currentAngle":0},
+        {"x":442.5,"y":110.1875,"width":62,"height":17,"type":"PLATFORM","currentX":442.5,"currentY":110.1875,"currentAngle":0},
+        {"x":451.5,"y":55.1875,"width":6,"height":37,"type":"PLATFORM","currentX":451.5,"currentY":55.1875,"currentAngle":0},
+        {"x":454.5,"y":55.1875,"width":20,"height":9,"type":"PLATFORM","currentX":454.5,"currentY":55.1875,"currentAngle":0},
+        {"x":468.5,"y":62.1875,"width":9,"height":12,"type":"PLATFORM","currentX":468.5,"currentY":62.1875,"currentAngle":0},
+        {"x":455.5,"y":73.1875,"width":17,"height":9,"type":"PLATFORM","currentX":455.5,"currentY":73.1875,"currentAngle":0},
+        {"x":471.5,"y":78.1875,"width":9,"height":14,"type":"PLATFORM","currentX":471.5,"currentY":78.1875,"currentAngle":0},
+        {"x":488.5,"y":57.1875,"width":23,"height":6,"type":"PLATFORM","currentX":488.5,"currentY":57.1875,"currentAngle":0},
+        {"x":492.5,"y":83.1875,"width":20,"height":7,"type":"PLATFORM","currentX":492.5,"currentY":83.1875,"currentAngle":0},
+        {"x":497.5,"y":61.1875,"width":9,"height":25,"type":"PLATFORM","currentX":497.5,"currentY":61.1875,"currentAngle":0},
+        {"x":533.5,"y":64.1875,"width":6,"height":26,"type":"PLATFORM","currentX":533.5,"currentY":64.1875,"currentAngle":0},
+        {"x":533.5,"y":58.1875,"width":20,"height":11,"type":"PLATFORM","currentX":533.5,"currentY":58.1875,"currentAngle":0},
+        {"x":538.5,"y":75.1875,"width":13,"height":6,"type":"PLATFORM","currentX":538.5,"currentY":75.1875,"currentAngle":0},
+        {"x":549.5,"y":70.1875,"width":7,"height":11,"type":"PLATFORM","currentX":549.5,"currentY":70.1875,"currentAngle":0},
+        {"x":550.5,"y":67.1875,"width":7,"height":8,"type":"PLATFORM","currentX":550.5,"currentY":67.1875,"currentAngle":0},
+        {"x":26.5,"y":223.1875,"width":20,"height":175,"type":"SPIKE","currentX":26.5,"currentY":223.1875,"currentAngle":0},
+        {"x":469.5,"y":384.1875,"width":337,"height":21,"type":"SPIKE","currentX":469.5,"currentY":384.1875,"currentAngle":0},
+        {"x":325.5,"y":76.1875,"width":16,"height":18,"type":"PORTAL_SHRINK","currentX":218.5,"currentY":308.1875,"currentAngle":0}
+    ],
 
 [
-    {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},{"x":225,"y":139.1875,"width":70,"height":244,"type":"PLATFORM"},{"x":523,"y":70.1875,"width":80,"height":315,"type":"PLATFORM"},{"x":192,"y":298.1875,"width":41,"height":23,"type":"PLATFORM"},{"x":191,"y":223.1875,"width":38,"height":25,"type":"PLATFORM"},{"x":193,"y":160.1875,"width":45,"height":25,"type":"PLATFORM"},{"x":450.875,"y":69.9140625,"width":74,"height":20,"type":"PLATFORM","tx":448.875,"ty":379.9140625,"isMoving":true},{"x":500,"y":283.9971618652344,"width":29,"height":37,"type":"PLATFORM"},{"x":459,"y":201.99716186523438,"width":32,"height":32,"type":"PLATFORM"},{"x":500,"y":122.99716186523438,"width":33,"height":42,"type":"PLATFORM"},{"x":542.75,"y":64.671875,"width":45,"height":6,"type":"SPIKE","tx":542.75,"ty":71.671875,"isMoving":true},{"x":12.75,"y":329.671875,"width":24,"height":19,"type":"SPAWN"},{"x":260.75,"y":126.671875,"width":36,"height":15,"type":"PORTAL_SHRINK"},{"x":602.75,"y":361.671875,"width":200,"height":46,"type":"SPIKE"},{"x":694.75,"y":24.671875,"width":45,"height":40,"type":"GOAL"},{"x":527.75,"y":62.671875,"width":13,"height":9,"type":"PORTAL_NORMAL"}
+    {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},
+    {"x":225,"y":139.1875,"width":70,"height":244,"type":"PLATFORM"},
+    {"x":523,"y":70.1875,"width":80,"height":315,"type":"PLATFORM"},
+    {"x":192,"y":298.1875,"width":41,"height":23,"type":"PLATFORM"},
+    {"x":191,"y":223.1875,"width":38,"height":25,"type":"PLATFORM"},
+    {"x":193,"y":160.1875,"width":45,"height":25,"type":"PLATFORM"},
+    {"x":450.875,"y":69.9140625,"width":74,"height":20,"type":"PLATFORM","tx":448.875,"ty":379.9140625,"isMoving":true},
+    {"x":500,"y":283.9971618652344,"width":29,"height":37,"type":"PLATFORM"},
+    {"x":459,"y":201.99716186523438,"width":32,"height":32,"type":"PLATFORM"},
+    {"x":500,"y":122.99716186523438,"width":33,"height":42,"type":"PLATFORM"},
+    {"x":542.75,"y":64.671875,"width":45,"height":6,"type":"SPIKE","tx":542.75,"ty":71.671875,"isMoving":true},
+    {"x":12.75,"y":329.671875,"width":24,"height":19,"type":"SPAWN"},
+    {"x":260.75,"y":126.671875,"width":36,"height":15,"type":"PORTAL_SHRINK"},
+    {"x":602.75,"y":361.671875,"width":200,"height":46,"type":"SPIKE"},
+    {"x":694.75,"y":24.671875,"width":45,"height":40,"type":"GOAL"},
+    {"x":527.75,"y":62.671875,"width":13,"height":9,"type":"PORTAL_NORMAL"}
     ],
 
 
 [
-    {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},{"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},{"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},{"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},{"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},{"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
+    {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0},
+    {"x":5.5,"y":209.1875,"width":59,"height":23,"type":"PLATFORM"},
+    {"x":186.5,"y":208.1875,"width":376,"height":22,"type":"PLATFORM","spinSpeed":56,"isSpinning":true},
+    {"x":678.5,"y":211.1875,"width":57,"height":18,"type":"PLATFORM"},
+    {"x":30.5,"y":182.1875,"width":16,"height":15,"type":"SPAWN"},
+    {"x":734.5,"y":157.1875,"width":37,"height":37,"type":"GOAL"}
+],
+
+[
+    {"x":0,"y":380,"width":800,"height":20,"type":"SPIKE","angle":0,"currentX":0,"currentY":380,"currentAngle":0},
+    {"x":726.5,"y":138.1875,"width":53,"height":31,"type":"SPAWN","currentX":726.5,"currentY":138.1875,"currentAngle":0},
+    {"x":714.5,"y":208.1875,"width":61,"height":24,"type":"PLATFORM","currentX":714.5,"currentY":208.1875,"currentAngle":0},
+    {"x":533.5,"y":150.1875,"width":58,"height":30,"type":"PLATFORM","tx":474.5,"ty":104.1875,"isMoving":true,"currentX":478.7772594606446,"currentY":107.52231246084156,"currentAngle":0},
+    {"x":409.5,"y":-27.8125,"width":40,"height":133,"type":"PLATFORM","currentX":409.5,"currentY":-27.8125,"currentAngle":0},
+    {"x":411.5,"y":167.1875,"width":39,"height":240,"type":"PLATFORM","currentX":411.5,"currentY":167.1875,"currentAngle":0},
+    {"x":409.5,"y":98.1875,"width":39,"height":89,"type":"PLATFORM","tx":410.5,"ty":357.1875,"isMoving":true,"currentX":410.42750407693825,"currentY":338.4110559270008,"currentAngle":0},
+    {"x":160.5,"y":23.1875,"width":31,"height":232,"type":"PLATFORM","spinSpeed":75,"isSpinning":true,"tx":283.5,"ty":23.1875,"isMoving":true,"currentX":274.58300146340196,"currentY":23.1875,"currentAngle":0,"moveSpeed":1},
+    {"x":19.5,"y":25.1875,"width":41,"height":47,"type":"GOAL","currentX":19.5,"currentY":25.1875,"currentAngle":0}
+],
+
+[
+    {"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},
+    {"x":50,"y":340,"width":30,"height":30,"type":"SPAWN"},
+    {"x":40,"y":355,"width":30,"height":30,"type":"LEVER", "channel": 1},
+    {"x":300,"y":100,"width":30,"height":30,"type":"BUTTON", "channel": 2},
+    // Channel 1: Moves platform to bridge the gap
+    {"x":150,"y":340,"width":100,"height":20,"type":"PLATFORM", "tx":150, "ty":200, "isMoving": true, "channel": 1},
+    // Channel 2: Moves platform to allow access to goal
+    {"x":450,"y":200,"width":100,"height":20,"type":"PLATFORM", "tx":650, "ty":100, "isMoving": true, "channel": 2},
+    {"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},
+    {"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"}
 ]
 
     
@@ -724,6 +819,7 @@ function closeDialogue() {
 
 // 4. LEVEL LOGIC
 function initLevel() {
+    channelStates = {}; // Reset channels for the new level
     if (isCustomMode && customLevelData) {
         // Deep copy simple level objects to avoid mutation and circular structure risks
         worldObjects = customLevelData.map(obj => {
@@ -734,6 +830,7 @@ function initLevel() {
             delete copy.currentX;
             delete copy.currentY;
             delete copy.currentAngle;
+            delete copy.currentLerp;
             return copy;
         });
         document.getElementById('level-display').innerText = "CUSTOM";
@@ -820,8 +917,12 @@ window.addEventListener('keydown', (e) => {
     if (e.code === controls.interact && gameState === 'PLAYING') {
         if (dialogueActive) {
             closeDialogue();
-        } else if (currentNpc) {
-            openDialogue(currentNpc.dialogue || "Hello there!");
+        } else if (currentInteractable) {
+            if (currentInteractable.type === 'NPC') {
+                openDialogue(currentInteractable.dialogue || "Hello there!");
+            } else if (currentInteractable.type === 'LEVER' || currentInteractable.type === 'BUTTON') {
+                toggleChannel(currentInteractable.channel);
+            }
         }
     }
 });
@@ -876,20 +977,35 @@ function update(timestamp) {
 
     // --- 1. UPDATE PLATFORM POSITIONS & ROTATION ---
     worldObjects.forEach(obj => {
+        // Initialize lerp progress if missing
+        if (obj.currentLerp === undefined) obj.currentLerp = 0;
+
+        if (obj.channel !== undefined) {
+            const isActive = !!channelStates[obj.channel];
+            const target = isActive ? 1 : 0;
+            // Smooth transition for channel-linked objects (speed 5.0)
+            const speed = 5.0 * dt;
+            if (obj.currentLerp < target) obj.currentLerp = Math.min(target, obj.currentLerp + speed);
+            else if (obj.currentLerp > target) obj.currentLerp = Math.max(target, obj.currentLerp - speed);
+        } else {
+            // Default oscillation for non-channel moving objects
+            obj.currentLerp = (Math.sin(gameTime * (obj.moveSpeed || 1)) + 1) / 2;
+        }
+
         if (obj.isMoving) {
             obj.oldX = obj.currentX || obj.x;
             obj.oldY = obj.currentY || obj.y;
-            // Use moveSpeed as a frequency multiplier (default 1)
-            let progress = (Math.sin(gameTime * (obj.moveSpeed || 1)) + 1) / 2;
-            obj.currentX = obj.x + (obj.tx - obj.x) * progress;
-            obj.currentY = obj.y + (obj.ty - obj.y) * progress;
+            obj.currentX = obj.x + (obj.tx - obj.x) * obj.currentLerp;
+            obj.currentY = obj.y + (obj.ty - obj.y) * obj.currentLerp;
         } else {
             obj.currentX = obj.x;
             obj.currentY = obj.y;
         }
 
         if (obj.isSpinning) {
-            obj.currentAngle = (obj.currentAngle || 0) + (obj.spinSpeed || 0) * dt;
+            // If channel linked, spin speed is modulated by lerp (or just on/off)
+            const multiplier = (obj.channel !== undefined) ? obj.currentLerp : 1;
+            obj.currentAngle = (obj.currentAngle || 0) + (obj.spinSpeed || 0) * dt * multiplier;
         } else {
             obj.currentAngle = obj.angle || 0;
         }
@@ -929,7 +1045,7 @@ function update(timestamp) {
     }
 
     // --- 3. INPUTS & PHYSICS ---
-    currentNpc = null;
+    currentInteractable = null;
     const prompt = document.getElementById('interaction-prompt');
     if (!dialogueActive) prompt.style.display = 'none';
 
@@ -940,40 +1056,57 @@ function update(timestamp) {
                 const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
                 const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
                 const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist < 120) currentNpc = obj; 
+                if (dist < 120) currentInteractable = obj; 
             }
         });
 
-        if (currentNpc) {
+        if (currentInteractable) {
             prompt.style.display = 'block';
-            prompt.style.left = (currentNpc.currentX + currentNpc.width / 2) + 'px';
-            prompt.style.top = (currentNpc.currentY - 30) - (prompt.offsetHeight/2) + 'px';
+            prompt.style.left = (currentInteractable.currentX + currentInteractable.width / 2) + 'px';
+            prompt.style.top = (currentInteractable.currentY - 30) - (prompt.offsetHeight/2) + 'px';
         }
 
         // Pause movement and timer when talking
         player.velX = 0;
     } else {
+        let interactionCandidate = null;
+        let interactionType = "TALK";
+
         worldObjects.forEach(obj => {
-            if (obj.type === 'NPC') {
+            const isNPC = obj.type === 'NPC';
+            const isLever = obj.type === 'LEVER';
+            const isButton = obj.type === 'BUTTON';
+            
+            if (isNPC || isLever || isButton) {
                 const dx = (player.x + player.width/2) - (obj.currentX + obj.width/2);
                 const dy = (player.y + player.height/2) - (obj.currentY + obj.height/2);
                 const dist = Math.sqrt(dx*dx + dy*dy);
+                
                 if (dist < 100) {
-                    currentNpc = obj;
-                    prompt.style.display = 'block';
-                    
-                    // Show actual interact key in prompt
-                    const rawKey = controls.interact || 'E';
-                    const keyName = rawKey.replace('Key', '').replace('Digit', '');
-                    prompt.innerText = `[${keyName}] TALK`;
-
-                    // Position prompt above NPC (relative to game-container)
-                    prompt.style.left = (obj.currentX + obj.width / 2) + 'px';
-                    prompt.style.top = (obj.currentY - 30) + 'px';
-                    prompt.style.maxWidth = '200px';
+                    if (!interactionCandidate || dist < interactionCandidate.dist) {
+                        interactionCandidate = { obj, dist };
+                        if (isNPC) interactionType = "TALK";
+                        else if (isLever) interactionType = channelStates[obj.channel] ? "FLIP OFF" : "FLIP ON";
+                        else if (isButton) interactionType = "PUSH";
+                    }
                 }
             }
         });
+
+        if (interactionCandidate) {
+            currentInteractable = interactionCandidate.obj;
+            prompt.style.display = 'block';
+            const rawKey = controls.interact || 'E';
+            const keyName = rawKey.replace('Key', '').replace('Digit', '');
+            prompt.innerText = `[${keyName}] ${interactionType}`;
+
+            prompt.style.left = (currentInteractable.currentX + currentInteractable.width / 2) + 'px';
+            prompt.style.top = (currentInteractable.currentY - 30) + 'px';
+            prompt.style.maxWidth = '200px';
+        } else {
+            currentInteractable = null;
+        }
+    }
 
         if ((keys[controls.jump] || touchKeys.jump) && player.coyoteCounter > 0) {
             player.velY = jumpForce;
@@ -993,7 +1126,6 @@ function update(timestamp) {
         } else {
             player.velX *= Math.pow(friction, dt);
         }
-    }
 
     player.velY += gravity * dt;
 
@@ -1176,8 +1308,41 @@ function draw() {
         }
         
         ctx.fillStyle = color;
-        if (obj.type === 'NPC') {
-            // NPC character drawing (matching editor look)
+
+        if (obj.type === 'LEVER' || obj.type === 'BUTTON') {
+            const isActive = !!channelStates[obj.channel];
+            const stateColor = isActive ? '#00d2ff' : '#2ed573';
+            ctx.fillStyle = stateColor;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = stateColor;
+
+            if (obj.type === 'LEVER') {
+                // Base
+                ctx.fillStyle = '#444';
+                ctx.fillRect(-obj.width/2, obj.height/2 - 5, obj.width, 5);
+                // Stick
+                ctx.save();
+                ctx.translate(0, obj.height/2 - 5);
+                const stickAngle = isActive ? -Math.PI/4 : Math.PI/4;
+                ctx.rotate(stickAngle);
+                ctx.fillStyle = stateColor;
+                ctx.fillRect(-2, -obj.height * 0.8, 4, obj.height * 0.8);
+                ctx.beginPath();
+                ctx.arc(0, -obj.height * 0.8, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            } else if (obj.type === 'BUTTON') {
+                // Base
+                ctx.fillStyle = '#444';
+                ctx.fillRect(-obj.width/2, obj.height/2 - 5, obj.width, 5);
+                // Button top
+                ctx.fillStyle = stateColor;
+                const topY = isActive ? obj.height/2 - 8 : obj.height/2 - 12;
+                const topH = isActive ? 3 : 7;
+                ctx.fillRect(-obj.width/3, topY, obj.width/1.5, topH);
+            }
+        } else if (obj.type === 'NPC') {
+            // NPC character drawing
             ctx.beginPath();
             ctx.arc(0, -obj.height/4, obj.width/3, 0, Math.PI * 2);
             ctx.fill();
