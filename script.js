@@ -385,7 +385,39 @@ const LEVEL_DATABASE = [
 {"x":700,"y":60,"width":50,"height":40,"type":"GOAL"},
 {"x":100,"y":380,"width":700,"height":20,"type":"SPIKE"},
 {"x":24.5,"y":348.1875,"width":22,"height":18,"type":"SPAWN"}
+],
+
+[
+    {"x":0,"y":0,"width":800,"height":20,"type":"PLATFORM"},
+{"x":0,"y":380,"width":800,"height":20,"type":"PLATFORM"},
+{"x":0,"y":0,"width":20,"height":400,"type":"PLATFORM"},
+{"x":780,"y":0,"width":20,"height":400,"type":"PLATFORM"},
+{"x":100,"y":20,"width":600,"height":10,"type":"SPIKE"},
+{"x":69,"y":370,"width":600,"height":10,"type":"SPIKE"},
+{"x":40,"y":100,"width":40,"height":30,"type":"SPAWN"},
+{"x":40,"y":130,"width":100,"height":20,"type":"PLATFORM"},
+{"x":720,"y":330,"width":50,"height":40,"type":"GOAL"},
+{"x":350,"y":220,"width":100,"height":20,"type":"PLATFORM"},
+{"x":385,"y":190,"width":30,"height":30,"type":"BUTTON","channel":1},
+{"x":200,"y":300,"width":80,"height":20,"type":"PLATFORM"},
+{"x":550,"y":260,"width":80,"height":20,"type":"PLATFORM"},
+{"x":690,"y":310,"width":15,"height":70,"type":"PLATFORM","tx":690,"ty":100,"isMoving":true,"channel":1},
+{"x":703.5,"y":303.1875,"width":82,"height":19,"type":"PLATFORM"}
+],
+
+[
+    {"x":20,"y":380,"width":60,"height":20,"type":"PLATFORM"},
+{"x":30,"y":350,"width":22,"height":18,"type":"SPAWN"},
+{"x":150,"y":300,"width":30,"height":30,"type":"PLATFORM","isSpinning":true,"spinSpeed":80},
+{"x":300,"y":200,"width":30,"height":30,"type":"PLATFORM","isSpinning":true,"spinSpeed":-80},
+{"x":450,"y":100,"width":30,"height":30,"type":"PLATFORM","isSpinning":true,"spinSpeed":80},
+{"x":300,"y":50,"width":30,"height":30,"type":"BUTTON","channel":9},
+{"x":600,"y":0,"width":20,"height":400,"type":"PLATFORM","tx":600,"ty":-500,"isMoving":true,"channel":9},
+{"x":0,"y":395,"width":800,"height":5,"type":"SPIKE"},
+{"x":700,"y":200,"width":50,"height":40,"type":"GOAL"}
 ]
+
+
 ];
 
 let currentLevelIndex = 0;
